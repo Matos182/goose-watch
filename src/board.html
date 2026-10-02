@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOOSE Watch</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #121821; --panel2: #18202b; --line: #243042;
+    --text: #e6edf3; --muted: #8b98a8; --faint: #5b6878;
+    --sev1: #4ea1ff; --sev2: #f2b33d; --sev3: #ff5c5c;
+    --cyber: #ff6b6b; --maint: #4ea1ff; --fault: #f2b33d; --unclear: #8b98a8;
+    --ok: #3fcf8e;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); }
+  header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #101722, var(--bg)); }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+  .brand h1 b { color: var(--ok); }
+  .brand span { color: var(--muted); font-size: 13px; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { font: 12px var(--mono); padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+  .pill.down { color: var(--sev2); border-color: #4a3a1a; }
+  .pill.down::before { background: var(--sev2) !important; box-shadow: 0 0 8px var(--sev2) !important; }
+  .pill.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+    margin-right: 7px; box-shadow: 0 0 8px var(--ok); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  main { max-width: 1180px; margin: 0 auto; padding: 22px 28px 90px; }
+  .rule { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+  .rule strong { color: var(--text); }
+  #empty { color: var(--faint); text-align: center; padding: 70px 0; font: 14px var(--mono); }
+  .card { display: grid; grid-template-columns: 6px minmax(0, 1fr) minmax(0, 1.05fr); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow: hidden; animation: in .35s ease-out; }
+  @keyframes in { from { opacity: 0; transform: translateY(-6px); } }
+  .bar.s1 { background: var(--sev1); } .bar.s2 { background: var(--sev2); } .bar.s3 { background: var(--sev3); }
+  .what { padding: 16px 20px; border-right: 1px solid var(--line); min-width: 0; }
+  .top { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+  .sev { font: 600 11px var(--mono); letter-spacing: .06em; padding: 3px 8px; border-radius: 6px; color: #0b0f14; }
+  .sev.s1 { background: var(--sev1); } .sev.s2 { background: var(--sev2); } .sev.s3 { background: var(--sev3); }
+  .time { color: var(--faint); font: 12px var(--mono); margin-left: auto; }
+  .title { font-size: 18px; font-weight: 650; margin: 2px 0 4px; }
+  .plain { color: var(--muted); margin: 0 0 10px; }
+  .src { font: 12px var(--mono); color: var(--faint); overflow-wrap: anywhere; }
+  .src b { color: var(--muted); font-weight: 500; }
+  .ai { padding: 14px 18px; background: var(--panel2); display: flex; flex-direction: column; gap: 12px; }
+  .ai h3 { margin: 0; font: 600 11px var(--mono); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
+  .reading { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 12px; align-items: center; }
+  .model { font: 12px var(--mono); color: var(--muted); }
+  .verdict { font-weight: 600; font-size: 14px; }
+  .verdict.unsure { color: var(--unclear); }
+  .verdict.unsure::before { content: "?"; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 7px;
+    border: 1px dashed var(--unclear); border-radius: 50%; font-size: 11px; }
+  .bars { grid-column: 2; display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #0e141c; }
+  .bars i { display: block; height: 100%; transition: width .4s; }
+  .legend { grid-column: 2; display: flex; gap: 10px; flex-wrap: wrap; font: 11px var(--mono); color: var(--faint); }
+  .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; background: var(--c); }
+  .pending { color: var(--faint); font: 12px var(--mono); }
+  .c-cyberattack { --c: var(--cyber); color: var(--cyber); } .c-maintenance { --c: var(--maint); color: var(--maint); }
+  .c-device_fault { --c: var(--fault); color: var(--fault); } .c-unclear { --c: var(--unclear); }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 28px; background: rgba(11,15,20,.92);
+    border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; text-align: center; backdrop-filter: blur(6px); }
+  footer b { color: var(--text); }
+  @media (max-width: 760px) {
+    header, main { padding-left: 16px; padding-right: 16px; }
+    .card { grid-template-columns: 5px minmax(0, 1fr); }
+    .what { border-right: 0; }
+    .ai { grid-column: 2; border-top: 1px solid var(--line); }
+    .reading { grid-template-columns: 1fr; }
+    .bars, .legend { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>GOOSE <b>Watch</b></h1><span>IEC 61850 substation bus · local AI triage</span></div>
+  <div class="pills"><span class="pill live" id="conn">connecting</span><span class="pill" id="models"></span><span class="pill">nothing leaves this machine</span></div>
+</header>
+<main>
+  <p class="rule"><strong>The rule decides.</strong> Severity comes only from deterministic checks on the traffic. The AI models give their reading and show how sure they are, and a human makes the call.</p>
+  <div id="feed"><div id="empty">listening to the bus…</div></div>
+</main>
+<footer>Tip 1 · <b>Keep sensitive data on a local AI.</b> &nbsp;·&nbsp; Tip 2 · <b>Distrust an AI that is always certain. Check it, then decide.</b></footer>
+<script>
+const TITLES = {
+  NEW_PUBLISHER: "Unknown device on the bus", CONFIG_CHANGE: "Configuration changed",
+  STNUM_REGRESSION: "Message from the past", STNUM_JUMP: "State jumped ahead",
+  SQNUM_RESET: "Sequence restarted", DATA_WITHOUT_STNUM: "Value changed without a new state",
+  TTL_EXPIRY: "Signal lost", TEST_MODE: "Device in test mode", SIM_BIT: "Simulated traffic",
+};
+const CAUSE = { cyberattack: "cyberattack", maintenance: "maintenance", device_fault: "device fault", unclear: "unclear" };
+const SEV = { 1: "NOTE", 2: "INVESTIGATE", 3: "ACT NOW" };
+const feed = document.getElementById("feed");
+const cards = new Map();
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+function readingEl(r) {
+  const row = el("div", "reading");
+  row.append(el("div", "model", r.model));
+  const v = el("div", "verdict" + (r.notSure ? " unsure" : " c-" + r.cause));
+  v.textContent = r.cause === undefined ? r.text
+    : r.notSure ? `not sure · best guess ${CAUSE[r.cause]} ${Math.round(r.p * 100)}%`
+    : `${CAUSE[r.cause]} ${Math.round(r.p * 100)}%`;
+  row.append(v);
+  if (r.dist) {
+    const bars = el("div", "bars"), legend = el("div", "legend");
+    for (const k of Object.keys(CAUSE)) {
+      const i = el("i", "c-" + k); i.style.width = (r.dist[k] * 100).toFixed(1) + "%"; i.style.background = "var(--c)"; bars.append(i);
+      legend.append(el("span", "c-" + k, `${CAUSE[k]} ${Math.round(r.dist[k] * 100)}`));
+    }
+    row.append(bars, legend);
+  }
+  return row;
+}
+
+function addCard(item, models) {
+  document.getElementById("empty")?.remove();
+  const a = item.alert, card = el("div", "card");
+  card.append(el("div", "bar s" + a.severity));
+  const what = el("div", "what"), top = el("div", "top");
+  top.append(el("span", "sev s" + a.severity, `${a.severity} · ${SEV[a.severity]}`), el("span", "time", new Date(a.tMs).toLocaleTimeString()));
+  what.append(top, el("div", "title", TITLES[a.cls] ?? a.cls), el("p", "plain", item.plain));
+  const src = el("div", "src"); src.append(el("b", "", a.cls + "  "), document.createTextNode(`${a.gocbRef} · ${a.srcMac}`));
+  what.append(src);
+  const ai = el("div", "ai"); ai.append(el("h3", "", "AI readings (advisory)"));
+  const slots = el("div", ""); slots.style.display = "contents";
+  ai.append(slots);
+  for (const r of item.readings) slots.append(readingEl(r));
+  const pending = el("div", "pending", item.readings.length < models.length ? "asking local models…" : "");
+  ai.append(pending);
+  card.append(what, ai);
+  feed.prepend(card);
+  cards.set(item.id, { slots, pending, n: item.readings.length, total: models.length });
+}
+
+let models = [];
+const es = new EventSource("/events");
+es.addEventListener("snapshot", (e) => {
+  const s = JSON.parse(e.data); models = s.models;
+  document.getElementById("models").textContent = s.models.join(" · ");
+  feed.replaceChildren(el("div", "", "")); feed.firstChild.id = "empty"; feed.firstChild.textContent = "listening to the bus…";
+  cards.clear(); for (const it of s.items) addCard(it, models);
+});
+es.addEventListener("alert", (e) => addCard(JSON.parse(e.data), models));
+es.addEventListener("reading", (e) => {
+  const { id, reading } = JSON.parse(e.data), c = cards.get(id); if (!c) return;
+  c.slots.append(readingEl(reading)); c.n++; if (c.n >= c.total) c.pending.textContent = "";
+});
+es.addEventListener("reset", () => { feed.replaceChildren(); const e = el("div", "", "new run · listening to the bus…"); e.id = "empty"; feed.append(e); cards.clear(); });
+const conn = document.getElementById("conn");
+es.onopen = () => { conn.textContent = "live"; conn.classList.remove("down"); };
+es.onerror = () => { conn.textContent = "reconnecting"; conn.classList.add("down"); };
+</script>
+</body>
+</html>
