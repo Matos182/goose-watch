@@ -5,7 +5,7 @@
 // reach a production LAN.
 
 import { dlopen, FFIType, ptr } from "bun:ffi";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 
 const AF_PACKET = 17;
 const SOCK_RAW = 3;
@@ -23,7 +23,10 @@ const libc = dlopen("libc.so.6", {
 
 export const LAB_IFACE = /^gw[a-z0-9]{1,8}$/;
 
-export function labNamespaceProblem(ifaces = readdirSync("/sys/class/net")): string | null {
+// /sys/class/net can also hold plain files (e.g. bonding_masters); only entries with an ifindex are interfaces.
+const liveInterfaces = () => readdirSync("/sys/class/net").filter((i) => existsSync(`/sys/class/net/${i}/ifindex`));
+
+export function labNamespaceProblem(ifaces = liveInterfaces()): string | null {
   const foreign = ifaces.filter((i) => i !== "lo" && !LAB_IFACE.test(i));
   return foreign.length ? `network namespace has non-lab interfaces (${foreign.join(", ")}); run inside the lab namespace` : null;
 }

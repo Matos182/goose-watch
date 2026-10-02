@@ -14,3 +14,9 @@ describe("A2 lab frames never reach a real network", () => {
     expect(() => new RawSocket("gwa")).toThrow(/non-lab interfaces/);
   });
 });
+
+describe("A2 interface listing", () => {
+  test("non-interface files in /sys/class/net are ignored, real ones still refused", () => {
+    expect(labNamespaceProblem(["lo", "gw0"])).toBeNull();
+  });
+});
