@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "publishers": [
+    {
+      "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+      "srcMac": "02:1e:d0:00:00:11",
+      "datSet": "BAY1_CTRL/LLN0$dsPos",
+      "confRev": 1,
+      "numDatSetEntries": 2
+    },
+    {
+      "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+      "srcMac": "02:1e:d0:00:00:12",
+      "datSet": "BAY2_PROT/LLN0$dsTrip",
+      "confRev": 1,
+      "numDatSetEntries": 2
+    },
+    {
+      "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+      "srcMac": "02:1e:d0:00:00:13",
+      "datSet": "BB_PROT/LLN0$dsBlk",
+      "confRev": 1,
+      "numDatSetEntries": 2
+    }
+  ]
+}
