@@ -58,3 +58,18 @@ A model that STOPs is still allowed on the board, labelled "not reliable for thi
 Pack 2 plus one change: classes without a pattern hop get the measured facts together with v1's state, which carries the rule's meaning. Why: in the live story, Nimble on pack 2 read a forged status as a device fault at 0.81.
 
 **Held-out set:** `gold/gold-v3.json` (seeds 500/600). Packs 1, 2 and 3 all run on it. Stop rule unchanged.
+
+### Results on gold-v3 (2026-10-02)
+
+| Model | Pack | Verdict | Not sure | Confident accuracy | Cyberattack recall | p50 |
+|---|---|---|---|---|---|---|
+| nimble (GPU) | 1 | PASS | 0.08 | 0.92 | 0.60 | 545 ms |
+| nimble (GPU) | 2 | PASS | 0.15 | 1.00 | 0.60 | 557 ms |
+| nimble (GPU) | 3 | PASS | 0.08 | 1.00 | 0.80 | 475 ms |
+| tev1 4B (CPU) | 1 | STOP | 0.64 | 1.00 | 0.00 | 6.8 s |
+| tev1 4B (CPU) | 2 | PASS | 0.31 | 1.00 | 0.60 | 6.3 s |
+| tev1 4B (CPU) | 3 | PASS | 0.26 | 1.00 | 0.73 | 1.6 s |
+
+Pack 3 is best on both models. When the models are confident they are never wrong (tev1 on every pack, nimble from pack 2 on); what is left is cyberattacks they mark "not sure", which go to a human.
+
+**Memory:** two resident models (one on the GPU, one on the CPU) can exhaust a 16 GB WSL2 memory limit. Stop the model servers after an eval, or set a short `OLLAMA_KEEP_ALIVE`.
