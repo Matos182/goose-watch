@@ -1,0 +1,1081 @@
+{
+  "model": "tev1:latest",
+  "at": "2026-10-02T21:11:10.395Z",
+  "stopRule": {
+    "gate": 0.6,
+    "minValidRate": 0.95,
+    "minPrecisionPerLabel": 0.8,
+    "minConfidentPerLabelForCheck": 5,
+    "minConfidentAccuracy": 0.8,
+    "maxNotSureRate": 0.4
+  },
+  "n": 39,
+  "validRate": 1,
+  "notSureRate": 0.6666666666666667,
+  "confidentAccuracy": 1,
+  "confidentAccuracyWilson": [
+    0.7718981569447083,
+    1
+  ],
+  "brier": 0.5294584047435804,
+  "latencyMs": {
+    "p50": 484.62712999999894,
+    "p95": 19063.771143
+  },
+  "perLabel": {
+    "cyberattack": {
+      "predicted": 0,
+      "tp": 0,
+      "precision": null,
+      "precisionWilson": [
+        0,
+        1
+      ],
+      "recall": 0,
+      "actual": 15
+    },
+    "maintenance": {
+      "predicted": 12,
+      "tp": 12,
+      "precision": 1,
+      "precisionWilson": [
+        0.7574992425007574,
+        1
+      ],
+      "recall": 1,
+      "actual": 12
+    },
+    "device_fault": {
+      "predicted": 1,
+      "tp": 1,
+      "precision": 1,
+      "precisionWilson": [
+        0.20654329147389294,
+        1
+      ],
+      "recall": 0.08333333333333333,
+      "actual": 12
+    }
+  },
+  "failures": [],
+  "verdict": "STOP",
+  "reasons": [
+    "not-sure 0.67 > 0.4"
+  ],
+  "predictions": [
+    {
+      "id": "rogue-publisher-0-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.19412855957153832,
+            "maintenance": 0.05697771014683732,
+            "device_fault": 0.01563947556370411,
+            "unclear": 0.7332542547179203
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.7332542547179203,
+          "urgency": [
+            0.06470425228242226,
+            0.5555582181780335,
+            0.37973752953954415
+          ],
+          "needsHuman": 0.8543367100685124,
+          "latencyMs": 6330.531126000001
+        }
+      }
+    },
+    {
+      "id": "rogue-publisher-1-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.19412855957153832,
+            "maintenance": 0.05697771014683732,
+            "device_fault": 0.01563947556370411,
+            "unclear": 0.7332542547179203
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.7332542547179203,
+          "urgency": [
+            0.06470425228242226,
+            0.5555582181780335,
+            0.37973752953954415
+          ],
+          "needsHuman": 0.8543367100685124,
+          "latencyMs": 318.740812
+        }
+      }
+    },
+    {
+      "id": "rogue-publisher-2-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.19412855957153832,
+            "maintenance": 0.05697771014683732,
+            "device_fault": 0.01563947556370411,
+            "unclear": 0.7332542547179203
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.7332542547179203,
+          "urgency": [
+            0.06470425228242226,
+            0.5555582181780335,
+            0.37973752953954415
+          ],
+          "needsHuman": 0.8543367100685124,
+          "latencyMs": 313.37065600000005
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-0-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.17857563864477713,
+            "maintenance": 0.1403914454117928,
+            "device_fault": 0.019479890552370798,
+            "unclear": 0.6615530253910592
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.6615530253910592,
+          "urgency": [
+            0.2902102966199524,
+            0.5920662374736464,
+            0.11772346590640122
+          ],
+          "needsHuman": 0.6131388420205054,
+          "latencyMs": 553.6739749999997
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-1-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.20370980674058956,
+            "maintenance": 0.12211678419201705,
+            "device_fault": 0.02280161739986464,
+            "unclear": 0.6513717916675288
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.6513717916675288,
+          "urgency": [
+            0.2883707760210508,
+            0.5632000122775892,
+            0.14842921170135986
+          ],
+          "needsHuman": 0.5980041098961967,
+          "latencyMs": 684.7376030000005
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-2-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.18812696585921682,
+            "maintenance": 0.13625955277644955,
+            "device_fault": 0.020786838665250985,
+            "unclear": 0.6548266426990826
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.6548266426990826,
+          "urgency": [
+            0.26289778421574334,
+            0.5857660008025319,
+            0.15133621498172467
+          ],
+          "needsHuman": 0.6152287157605386,
+          "latencyMs": 472.566562
+        }
+      }
+    },
+    {
+      "id": "replay-0-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.19082779154174204,
+            "maintenance": 0.03979270234493318,
+            "device_fault": 0.24669905597334796,
+            "unclear": 0.5226804501399769
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.5226804501399769,
+          "urgency": [
+            0.20788348064085763,
+            0.5045648748552293,
+            0.2875516445039131
+          ],
+          "needsHuman": 0.537925200981051,
+          "latencyMs": 505.95775200000026
+        }
+      }
+    },
+    {
+      "id": "replay-1-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.15117856896725834,
+            "maintenance": 0.050435663467980965,
+            "device_fault": 0.26882520812397964,
+            "unclear": 0.529560559440781
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.529560559440781,
+          "urgency": [
+            0.1742329253143096,
+            0.48642403180554694,
+            0.3393430428801435
+          ],
+          "needsHuman": 0.6039245054390197,
+          "latencyMs": 437.59412300000076
+        }
+      }
+    },
+    {
+      "id": "replay-2-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.15903350948185926,
+            "maintenance": 0.04858654714260612,
+            "device_fault": 0.2512603127312379,
+            "unclear": 0.5411196306442967
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.5411196306442967,
+          "urgency": [
+            0.18720608569970332,
+            0.4956403850877583,
+            0.31715352921253853
+          ],
+          "needsHuman": 0.6094696933973,
+          "latencyMs": 498.4137499999997
+        }
+      }
+    },
+    {
+      "id": "poisoning-0-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.27888670106566604,
+            "maintenance": 0.06338134419937054,
+            "device_fault": 0.16859159522821923,
+            "unclear": 0.4891403595067442
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.4891403595067442,
+          "urgency": [
+            0.14120374439249467,
+            0.5042215088028419,
+            0.3545747468046634
+          ],
+          "needsHuman": 0.599785494256586,
+          "latencyMs": 497.1019579999993
+        }
+      }
+    },
+    {
+      "id": "poisoning-1-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.2907572780965646,
+            "maintenance": 0.06884311732150022,
+            "device_fault": 0.17516781170291487,
+            "unclear": 0.46523179287902033
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.46523179287902033,
+          "urgency": [
+            0.11592914483315331,
+            0.47781132753770333,
+            0.4062595276291435
+          ],
+          "needsHuman": 0.6258097905835941,
+          "latencyMs": 559.942798
+        }
+      }
+    },
+    {
+      "id": "poisoning-2-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.3199100011047516,
+            "maintenance": 0.06023508829628339,
+            "device_fault": 0.14679884807648602,
+            "unclear": 0.4730560625224791
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.4730560625224791,
+          "urgency": [
+            0.12620261058203988,
+            0.4785857275127554,
+            0.3952116619052046
+          ],
+          "needsHuman": 0.624390139732965,
+          "latencyMs": 537.2169329999997
+        }
+      }
+    },
+    {
+      "id": "forged-status-0-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.5317840574424675,
+            "maintenance": 0.02645234312947994,
+            "device_fault": 0.0455457743271462,
+            "unclear": 0.3962178251009065
+          },
+          "causeWinner": "cyberattack",
+          "causeP": 0.5317840574424675,
+          "urgency": [
+            0.15966664795397792,
+            0.47091114597079253,
+            0.3694222060752294
+          ],
+          "needsHuman": 0.6294774750328501,
+          "latencyMs": 431.4409430000014
+        }
+      }
+    },
+    {
+      "id": "forged-status-1-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.5486981393307784,
+            "maintenance": 0.03012046084185461,
+            "device_fault": 0.05396741088148005,
+            "unclear": 0.36721398894588697
+          },
+          "causeWinner": "cyberattack",
+          "causeP": 0.5486981393307784,
+          "urgency": [
+            0.14676107168093017,
+            0.4309205876136158,
+            0.42231834070545415
+          ],
+          "needsHuman": 0.6588360585607018,
+          "latencyMs": 484.62712999999894
+        }
+      }
+    },
+    {
+      "id": "forged-status-2-300",
+      "label": "cyberattack",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.5878143268390054,
+            "maintenance": 0.030998197979966547,
+            "device_fault": 0.04115533023455358,
+            "unclear": 0.3400321449464745
+          },
+          "causeWinner": "cyberattack",
+          "causeP": 0.5878143268390054,
+          "urgency": [
+            0.14251534178143718,
+            0.43166169110008534,
+            0.42582296711847756
+          ],
+          "needsHuman": 0.6846874860000763,
+          "latencyMs": 545.0891709999996
+        }
+      }
+    },
+    {
+      "id": "test-mode-0-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.04115795361047932,
+            "maintenance": 0.6835190337946091,
+            "device_fault": 0.001531186592185474,
+            "unclear": 0.2737918260027262
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.6835190337946091,
+          "urgency": [
+            0.4381312277278878,
+            0.5187321233566984,
+            0.043136648915413765
+          ],
+          "needsHuman": 0.5463410642239025,
+          "latencyMs": 527.674133999999
+        }
+      }
+    },
+    {
+      "id": "test-mode-1-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.03972180954662671,
+            "maintenance": 0.684885382694939,
+            "device_fault": 0.0018145006534855661,
+            "unclear": 0.2735783071049486
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.684885382694939,
+          "urgency": [
+            0.42895172507947554,
+            0.5094782843809641,
+            0.06156999053956047
+          ],
+          "needsHuman": 0.5762234293995514,
+          "latencyMs": 539.1599139999998
+        }
+      }
+    },
+    {
+      "id": "test-mode-2-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.04051077548569667,
+            "maintenance": 0.6901195473239657,
+            "device_fault": 0.0014144382981488262,
+            "unclear": 0.2679552388921887
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.6901195473239657,
+          "urgency": [
+            0.4109703478433118,
+            0.5314093024403919,
+            0.05762034971629622
+          ],
+          "needsHuman": 0.5989391420696702,
+          "latencyMs": 525.9266540000008
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-0-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.0014838843803257954,
+            "maintenance": 0.9426220002718535,
+            "device_fault": 0.0002809810825860383,
+            "unclear": 0.05561313426523464
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9426220002718535,
+          "urgency": [
+            0.5567372666243654,
+            0.4335940352815357,
+            0.009668698094098786
+          ],
+          "needsHuman": 0.5466492736442591,
+          "latencyMs": 684.8580810000003
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-1-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.00153026022552438,
+            "maintenance": 0.9320292785799904,
+            "device_fault": 0.00029599447114939776,
+            "unclear": 0.06614446672333596
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9320292785799904,
+          "urgency": [
+            0.5695610613938015,
+            0.4159818766950089,
+            0.014457061911189612
+          ],
+          "needsHuman": 0.5246115939712471,
+          "latencyMs": 19063.771143
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-2-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.0012175656879247231,
+            "maintenance": 0.9380429257468503,
+            "device_fault": 0.0002864262218290095,
+            "unclear": 0.060453082343395914
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9380429257468503,
+          "urgency": [
+            0.5757409268504604,
+            0.4118183940071794,
+            0.012440679142360205
+          ],
+          "needsHuman": 0.5105022240309214,
+          "latencyMs": 415.7520679999943
+        }
+      }
+    },
+    {
+      "id": "test-set-0-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.013445174903251294,
+            "maintenance": 0.9082838078852398,
+            "device_fault": 0.001586350595738648,
+            "unclear": 0.07668466661577042
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9082838078852398,
+          "urgency": [
+            0.11883713540992667,
+            0.8277868459258124,
+            0.05337601866426086
+          ],
+          "needsHuman": 0.7381739314012588,
+          "latencyMs": 417.57040699999925
+        }
+      }
+    },
+    {
+      "id": "test-set-1-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.013445174903251294,
+            "maintenance": 0.9082838078852398,
+            "device_fault": 0.001586350595738648,
+            "unclear": 0.07668466661577042
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9082838078852398,
+          "urgency": [
+            0.11883713540992667,
+            0.8277868459258124,
+            0.05337601866426086
+          ],
+          "needsHuman": 0.7381739314012588,
+          "latencyMs": 340.55034799999703
+        }
+      }
+    },
+    {
+      "id": "test-set-2-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.013445174903251294,
+            "maintenance": 0.9082838078852398,
+            "device_fault": 0.001586350595738648,
+            "unclear": 0.07668466661577042
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.9082838078852398,
+          "urgency": [
+            0.11883713540992667,
+            0.8277868459258124,
+            0.05337601866426086
+          ],
+          "needsHuman": 0.7381739314012588,
+          "latencyMs": 276.3281130000032
+        }
+      }
+    },
+    {
+      "id": "config-in-test-0-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.0050394217325687015,
+            "maintenance": 0.8471643265164496,
+            "device_fault": 0.0032213381026462047,
+            "unclear": 0.14457491364833547
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.8471643265164496,
+          "urgency": [
+            0.12038335461920467,
+            0.7897016435805356,
+            0.0899150018002598
+          ],
+          "needsHuman": 0.7879273686123598,
+          "latencyMs": 559.9216400000005
+        }
+      }
+    },
+    {
+      "id": "config-in-test-1-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.005199843909888261,
+            "maintenance": 0.8277509180986135,
+            "device_fault": 0.003975802077276579,
+            "unclear": 0.16307343591422183
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.8277509180986135,
+          "urgency": [
+            0.11185416391717211,
+            0.7634986118901735,
+            0.12464722419265431
+          ],
+          "needsHuman": 0.7653385814636025,
+          "latencyMs": 458.51008400000137
+        }
+      }
+    },
+    {
+      "id": "config-in-test-2-300",
+      "label": "maintenance",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.005367194950366304,
+            "maintenance": 0.8479878581583159,
+            "device_fault": 0.0033260138091624745,
+            "unclear": 0.14331893308215532
+          },
+          "causeWinner": "maintenance",
+          "causeP": 0.8479878581583159,
+          "urgency": [
+            0.1097048544067178,
+            0.7824212217252815,
+            0.10787392386800058
+          ],
+          "needsHuman": 0.7881720475388279,
+          "latencyMs": 503.5464609999981
+        }
+      }
+    },
+    {
+      "id": "link-loss-0-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.01170471634954243,
+            "maintenance": 0.01713413195417186,
+            "device_fault": 0.5635088799687716,
+            "unclear": 0.407652271727514
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.5635088799687716,
+          "urgency": [
+            0.10264681759642363,
+            0.3713073310589697,
+            0.5260458513446067
+          ],
+          "needsHuman": 0.5385452714674558,
+          "latencyMs": 386.650612999998
+        }
+      }
+    },
+    {
+      "id": "link-loss-1-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.010458628013686511,
+            "maintenance": 0.017276546574948013,
+            "device_fault": 0.5936282806771828,
+            "unclear": 0.37863654473418273
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.5936282806771828,
+          "urgency": [
+            0.07899702551869342,
+            0.3636796138216399,
+            0.5573233606596667
+          ],
+          "needsHuman": 0.571344384216668,
+          "latencyMs": 470.11996600000566
+        }
+      }
+    },
+    {
+      "id": "link-loss-2-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.011375687835328168,
+            "maintenance": 0.01774392584401496,
+            "device_fault": 0.5687553397188924,
+            "unclear": 0.40212504660176446
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.5687553397188924,
+          "urgency": [
+            0.09708817074845807,
+            0.3632699474534632,
+            0.5396418817980788
+          ],
+          "needsHuman": 0.5865654193456987,
+          "latencyMs": 383.98753599999327
+        }
+      }
+    },
+    {
+      "id": "link-loss-0-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.011863724101563576,
+            "maintenance": 0.017407888400266226,
+            "device_fault": 0.5702934159248766,
+            "unclear": 0.4004349715732936
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.5702934159248766,
+          "urgency": [
+            0.10810353128000325,
+            0.36800181308667085,
+            0.5238946556333259
+          ],
+          "needsHuman": 0.5281246844458214,
+          "latencyMs": 401.4343530000042
+        }
+      }
+    },
+    {
+      "id": "link-loss-1-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.011063629604446908,
+            "maintenance": 0.017813807275443374,
+            "device_fault": 0.6074134983255004,
+            "unclear": 0.36370906479460924
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.6074134983255004,
+          "urgency": [
+            0.08927010700807107,
+            0.36099368798504,
+            0.5497362050068889
+          ],
+          "needsHuman": 0.562538878800854,
+          "latencyMs": 397.7508569999991
+        }
+      }
+    },
+    {
+      "id": "link-loss-2-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.012670886640010677,
+            "maintenance": 0.01837676561646734,
+            "device_fault": 0.5576324776056802,
+            "unclear": 0.41131987013784177
+          },
+          "causeWinner": "device_fault",
+          "causeP": 0.5576324776056802,
+          "urgency": [
+            0.09797224858444062,
+            0.36415277065486906,
+            0.5378749807606903
+          ],
+          "needsHuman": 0.5687826172447581,
+          "latencyMs": 388.8068480000002
+        }
+      }
+    },
+    {
+      "id": "ied-restart-0-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.18559488967934432,
+            "maintenance": 0.05152564554538835,
+            "device_fault": 0.2837875840771496,
+            "unclear": 0.47909188069811787
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.47909188069811787,
+          "urgency": [
+            0.1541051790780342,
+            0.47549293493233824,
+            0.37040188598962753
+          ],
+          "needsHuman": 0.553684404507694,
+          "latencyMs": 502.1140519999972
+        }
+      }
+    },
+    {
+      "id": "ied-restart-1-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.16090697391047765,
+            "maintenance": 0.04745852835362581,
+            "device_fault": 0.30386509682868407,
+            "unclear": 0.48776940090721244
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.48776940090721244,
+          "urgency": [
+            0.12128632255071545,
+            0.46532485547641034,
+            0.41338882197287413
+          ],
+          "needsHuman": 0.6256418429770233,
+          "latencyMs": 491.3745099999942
+        }
+      }
+    },
+    {
+      "id": "ied-restart-2-300",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.16539350598327787,
+            "maintenance": 0.0434692732295556,
+            "device_fault": 0.2991008003407998,
+            "unclear": 0.4920364204463667
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.4920364204463667,
+          "urgency": [
+            0.13983778969565125,
+            0.4618986392983029,
+            0.3982635710060458
+          ],
+          "needsHuman": 0.5825244408792817,
+          "latencyMs": 444.6969859999954
+        }
+      }
+    },
+    {
+      "id": "ied-restart-0-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.1788207414485249,
+            "maintenance": 0.04974355915420339,
+            "device_fault": 0.27823797011873913,
+            "unclear": 0.4931977292785326
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.4931977292785326,
+          "urgency": [
+            0.1614420316156222,
+            0.479907368383693,
+            0.35865060000068477
+          ],
+          "needsHuman": 0.5609555217953961,
+          "latencyMs": 483.3390229999932
+        }
+      }
+    },
+    {
+      "id": "ied-restart-1-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.15960843569024216,
+            "maintenance": 0.04832333541439252,
+            "device_fault": 0.3011967491325215,
+            "unclear": 0.49087147976284384
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.49087147976284384,
+          "urgency": [
+            0.12794324066045135,
+            0.46887970981958327,
+            0.4031770495199654
+          ],
+          "needsHuman": 0.624531504774973,
+          "latencyMs": 434.69816900000296
+        }
+      }
+    },
+    {
+      "id": "ied-restart-2-400",
+      "label": "device_fault",
+      "result": {
+        "ok": true,
+        "triage": {
+          "model": "tev1:latest",
+          "pack": "triage-pack-1",
+          "cause": {
+            "cyberattack": 0.17631723571921493,
+            "maintenance": 0.04691157014684235,
+            "device_fault": 0.291119673905799,
+            "unclear": 0.48565152022814373
+          },
+          "causeWinner": "unclear",
+          "causeP": 0.48565152022814373,
+          "urgency": [
+            0.1315866139571543,
+            0.4622282093167822,
+            0.4061851767260635
+          ],
+          "needsHuman": 0.5955752535157129,
+          "latencyMs": 20542.636445000004
+        }
+      }
+    }
+  ]
+}

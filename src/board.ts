@@ -8,13 +8,15 @@ import type { Alert } from "./rules";
 import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
 import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
+import { triage2 } from "./pack2";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
 const file = opt("--alerts", "reports/live/board.jsonl");
 const port = Number(opt("--port", "8099"));
 const base = opt("--base", "http://127.0.0.1:11435");
-const models = opt("--models", "nimble:latest,tev1:0.8b").split(",");
+const models = opt("--models", "nimble:latest,tev1:latest").split(",");
+const pack = opt("--pack", "2");
 const adapters = models.map((m) => new SystemOneAdapter(base, m, 30_000));
 
 interface Reading { model: string; text: string; notSure: boolean; cause?: string; p?: number; needsHuman?: number; dist?: Record<string, number> }
@@ -47,7 +49,7 @@ function onAlert(a: Alert) {
   broadcast("alert", item);
   for (const [i, ad] of adapters.entries()) {
     queue = queue.then(async () => {
-      const rd = reading(models[i]!, a, await ad.triage(a, a.context));
+      const rd = reading(models[i]!, a, pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context));
       item.readings.push(rd);
       broadcast("reading", { id: item.id, reading: rd });
     });
@@ -94,4 +96,4 @@ Bun.serve({
     return new Response("not found", { status: 404 });
   },
 });
-console.log(`board on http://127.0.0.1:${port} · models ${models.join(", ")} at ${base} · tailing ${file}`);
+console.log(`board on http://127.0.0.1:${port} · pack ${pack} · models ${models.join(", ")} at ${base} · tailing ${file}`);
