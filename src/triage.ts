@@ -141,16 +141,30 @@ export function validate(raw: any, model: string): Omit<Triage, "latencyMs"> {
   return { model, pack: PACK_VERSION, cause, causeWinner, causeP, urgency: [urg["0"]!, urg["1"]!, urg["2"]!], needsHuman };
 }
 
+/**
+ * Whether a human must look now is decided in code, never by the model's needs_human Noul.
+ * Measured on gold-v3 (C18): the Noul said 0.01 on replays and 0.99 on harmless restarts, so it
+ * carries no signal. A human is needed when the rule is severity 3, when the model is not sure,
+ * or when it reads a cyberattack. The Noul stays in reports as data only.
+ */
+export function needsHuman(a: Alert, t: TriageResult, gate: number): boolean {
+  if (a.severity === 3 || !t.ok) return true;
+  const notSure = t.triage.causeP < gate || t.triage.causeWinner === "unclear";
+  return notSure || t.triage.causeWinner === "cyberattack";
+}
+
 /** The verdict shown to people. Severity is ALWAYS the rule's; the model only adds its reading. */
 export function verdict(a: Alert, t: TriageResult, gate: number) {
-  if (!t.ok) return { severity: a.severity, ai: `AI unavailable (${t.failure})`, notSure: true as const };
+  const human = needsHuman(a, t, gate) ? "a human checks now" : "no action needed now";
+  if (!t.ok) return { severity: a.severity, ai: `AI unavailable (${t.failure}): a human checks now`, notSure: true as const, human: true };
   const tr = t.triage;
   const notSure = tr.causeP < gate || tr.causeWinner === "unclear";
   return {
     severity: a.severity,
     ai: notSure
       ? `AI not sure (best guess ${tr.causeWinner} ${tr.causeP.toFixed(2)}): a human decides`
-      : `AI reading: ${tr.causeWinner} ${tr.causeP.toFixed(2)} · needs a human ${tr.needsHuman.toFixed(2)}`,
+      : `AI reading: ${tr.causeWinner} ${tr.causeP.toFixed(2)} · ${human}`,
     notSure,
+    human: needsHuman(a, t, gate),
   };
 }

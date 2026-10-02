@@ -184,3 +184,49 @@ export function pcapHeader(): Uint8Array {
 export function pcapRecord(p: Packet): Uint8Array {
   return writePcap([p]).slice(24);
 }
+
+// Offset of the 8-byte UtcTime value (goosePdu tag 0x84) in an encoded frame, or -1.
+function tOffset(b: Uint8Array): number {
+  let i = 12;
+  if (b[i] === 0x81 && b[i + 1] === 0x00) i += 4; // 802.1Q tag
+  if (b[i] !== 0x88 || b[i + 1] !== 0xb8) return -1;
+  i += 10; // ethertype, APPID, length, reserved1, reserved2
+  if (b[i] !== 0x61) return -1;
+  const lenAt = (j: number): [number, number] => {
+    const l = b[j]!;
+    if (l < 0x80) return [l, j + 1];
+    let n = 0;
+    for (let k = 1; k <= (l & 0x7f); k++) n = n * 256 + b[j + k]!;
+    return [n, j + 1 + (l & 0x7f)];
+  };
+  let [, j] = lenAt(i + 1);
+  while (j < b.length) {
+    const tag = b[j]!;
+    const [n, v] = lenAt(j + 1);
+    if (tag === 0x84) return n === 8 ? v : -1;
+    j = v + n;
+  }
+  return -1;
+}
+
+export function readT(b: Uint8Array): number | null {
+  const o = tOffset(b);
+  if (o < 0) return null;
+  const secs = ((b[o]! << 24) >>> 0) + (b[o + 1]! << 16) + (b[o + 2]! << 8) + b[o + 3]!;
+  const frac = (b[o + 4]! << 16) + (b[o + 5]! << 8) + b[o + 6]!;
+  return secs * 1000 + Math.round((frac / 0x1000000) * 1000);
+}
+
+/**
+ * Lab replay sends a recorded frame now, so its PDU timestamp is shifted by the same amount:
+ * the age a receiver measures (arrival − t) stays what it was in the recording. Without this,
+ * every replayed frame looks hours old, as if the whole stream were a replay attack.
+ */
+export function retime(b: Uint8Array, recordedMs: number, sendMs: number): Uint8Array {
+  const o = tOffset(b);
+  const t = readT(b);
+  if (o < 0 || t === null) return b;
+  const out = b.slice();
+  out.set(utcTime(sendMs - (recordedMs - t)), o);
+  return out;
+}

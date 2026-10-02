@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import type { Alert } from "../src/rules";
-import { SystemOneAdapter, verdict, type AlertContext } from "../src/triage";
+import { RULE_SEVERITY, type Alert } from "../src/rules";
+import { needsHuman, SystemOneAdapter, verdict, type AlertContext, type TriageResult } from "../src/triage";
 
 let reply: (body: any) => Response = () => new Response("{}");
 let lastBody: any;
@@ -81,5 +81,28 @@ describe("C16/A3 the model never changes the rule's verdict", () => {
   test("an unavailable model still leaves the alert at full severity", () => {
     const v = verdict(alert, { ok: false, failure: "transport", detail: "x" }, 0.6);
     expect(v).toMatchObject({ severity: 3, notSure: true });
+  });
+});
+
+describe("C18 whether a human must look is decided in code, never by the model's Noul", () => {
+  const causes = ["cyberattack", "maintenance", "device_fault", "unclear"] as const;
+  const tri = (winner: (typeof causes)[number], p: number, noul: number): TriageResult => ({ ok: true, triage: {
+    model: "m", pack: "p", cause: { cyberattack: 0, maintenance: 0, device_fault: 0, unclear: 0, [winner]: p },
+    causeWinner: winner, causeP: p, urgency: [0, 0, 0], needsHuman: noul, latencyMs: 1 } });
+  test("every severity-3 alert needs a human, whatever the model says (all classes x causes x p x Noul)", () => {
+    for (const [cls, sev] of Object.entries(RULE_SEVERITY)) for (const c of causes) for (const p of [0.3, 0.61, 0.99]) for (const n of [0, 0.01, 1]) {
+      const a = { ...alert, cls: cls as Alert["cls"], severity: sev };
+      const v = verdict(a, tri(c, p, n), 0.6);
+      if (sev === 3) expect(v.human).toBe(true);
+      // the Noul alone never changes the decision
+      expect(needsHuman(a, tri(c, p, n), 0.6)).toBe(needsHuman(a, tri(c, p, 1 - n), 0.6));
+    }
+  });
+  test("below severity 3: not sure or a cyberattack reading needs a human; a confident benign reading does not", () => {
+    const a = { ...alert, cls: "TEST_MODE" as const, severity: 1 as const };
+    expect(needsHuman(a, tri("maintenance", 0.95, 1), 0.6)).toBe(false);
+    expect(needsHuman(a, tri("maintenance", 0.5, 0), 0.6)).toBe(true);
+    expect(needsHuman(a, tri("cyberattack", 0.9, 0), 0.6)).toBe(true);
+    expect(needsHuman(a, { ok: false, failure: "transport", detail: "x" }, 0.6)).toBe(true);
   });
 });

@@ -22,7 +22,7 @@ const models = specs.map((m) => m.split("@")[0]!);
 const pack = opt("--pack", "3");
 const adapters = specs.map((m) => new SystemOneAdapter(m.split("@")[1] ?? base, m.split("@")[0]!, 30_000));
 
-interface Reading { model: string; text: string; notSure: boolean; cause?: string; p?: number; needsHuman?: number; dist?: Record<string, number> }
+interface Reading { model: string; text: string; notSure: boolean; cause?: string; p?: number; human?: boolean; dist?: Record<string, number> }
 interface Item { id: number; alert: Alert; plain: string; readings: Reading[] }
 
 let items: Item[] = [];
@@ -40,7 +40,7 @@ function broadcast(event: string, data: unknown) {
 function reading(model: string, a: Alert, r: TriageResult): Reading {
   const v = verdict(a, r, STOP_RULE.gate);
   if (!r.ok) return { model, text: v.ai, notSure: true };
-  return { model, text: v.ai, notSure: v.notSure, cause: r.triage.causeWinner, p: r.triage.causeP, needsHuman: r.triage.needsHuman, dist: r.triage.cause };
+  return { model, text: v.ai, notSure: v.notSure, cause: r.triage.causeWinner, p: r.triage.causeP, human: v.human, dist: r.triage.cause };
 }
 
 // One model call at a time keeps the GPU predictable during a live demo.

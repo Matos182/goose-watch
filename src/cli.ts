@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { decode, decodeAll } from "./decode";
 import { learn, RuleEngine, safeText, type Baseline } from "./rules";
 import { generate, SCENARIOS } from "./scenarios";
-import { pcapHeader, pcapRecord, readPcap, writePcap } from "./goose";
+import { pcapHeader, pcapRecord, readPcap, retime, writePcap } from "./goose";
 import { RawSocket } from "./rawsock";
 
 const [cmd, ...args] = Bun.argv.slice(2);
@@ -77,7 +77,7 @@ switch (cmd) {
     for (const p of pkts) {
       const due = (p.tMs - t0) / speed - (performance.now() - start);
       if (due > 1) await Bun.sleep(due);
-      sock.send(p.bytes);
+      sock.send(retime(p.bytes, p.tMs, Date.now()));
     }
     sock.close();
     console.error(`replayed ${pkts.length} frames on ${iface} at ${speed}x`);

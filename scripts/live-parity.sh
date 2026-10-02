@@ -3,7 +3,9 @@
 # (class, stream) set as the offline decode of the same pcap.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd); cd "$root"
-speed=${1:-10}; ok=0; n=0
+# Speed 4, not 10: at 10x the story's lost link is shorter than timeAllowedToLive in real time, so
+# TTL_EXPIRY cannot fire live (a speed artifact, not a sensor defect).
+speed=${1:-4}; ok=0; n=0
 for f in fixtures/*.pcap; do
   s=$(basename "$f" .pcap); n=$((n+1))
   off=$(bun src/cli.ts run --file "$f" --baseline fixtures/baseline.json --json | bun -e 'const t=await Bun.stdin.text();console.log([...new Set(t.trim().split("\n").filter(Boolean).map(l=>{const a=JSON.parse(l);return a.cls+"@"+a.key.split("|")[0]}))].sort().join(" "))')
