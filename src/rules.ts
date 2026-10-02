@@ -109,7 +109,8 @@ export class RuleEngine {
   /** Check every stream for silence up to `now`. Call on each event and on a timer when live. */
   tick(now: number) {
     for (const [key, s] of this.state) {
-      if (!s.expired && now - s.lastSeen > s.tal) {
+      // Silence only matters for publishers we expect: a rogue device going quiet is not a lost signal.
+      if (!s.expired && this.known.has(key) && now - s.lastSeen > s.tal) {
         s.expired = true;
         const [appHex, ...ref] = key.split("|");
         const known = this.known.get(key);

@@ -203,4 +203,23 @@ export const SCENARIOS: Scenario[] = [
           t: EPOCH + 30_000, stNum: 1, sqNum: (now - 30_000) / 1000, test: false, confRev: 1, ndsCom: false,
           allData: [{ kind: "boolean", value: true }] } }, now);
     }] },
+  { name: "story", description: "Five continuous minutes for the demo: maintenance, a rogue device, a replay, a lost link, a forged status, then poisoning.",
+    expect: ["TEST_MODE", "NEW_PUBLISHER", "STNUM_REGRESSION", "TTL_EXPIRY", "DATA_WITHOUT_STNUM", "STNUM_JUMP"], durationMs: 300_000, seed: 42,
+    mutators: [
+      between(40_000, 50_000, (_n, pubs) => { pubs[2]!.test = true; }), at(50_000, (pubs) => { pubs[2]!.test = false; }),
+      (now, _p, emit) => {
+        if (now >= 70_000 && now < 85_000 && now % 1000 === 0) emit({ dstMac: "01:0c:cd:01:00:99", srcMac: "02:66:66:66:66:01", vlanId: 10, appId: 0x0099,
+          simulationBit: false, pdu: { gocbRef: "ROGUE/LLN0$GO$gcb1", timeAllowedToLive: TAL, datSet: "ROGUE/LLN0$ds", goID: "ROGUE",
+            t: EPOCH + 70_000, stNum: 1, sqNum: (now - 70_000) / 1000, test: false, confRev: 1, ndsCom: false,
+            allData: [{ kind: "boolean", value: true }] } }, now);
+      },
+      at(110_000, (pubs, emit) => { const p = pubs[0]!; emit(frameOf(p, 110_000, { stNum: p.stNum - 3, sqNum: 7, t: EPOCH + 1000 }), 110_000); }),
+      (now, pubs) => { if (now >= 140_000 && now <= 150_000) pubs[1]!.silent = now < 150_000; },
+      at(180_000, (pubs, emit) => { const p = pubs[0]!;
+        emit(frameOf(p, 180_000, { sqNum: p.sqNum, allData: [{ kind: "boolean", value: !p.value }, { kind: "bitstring", bits: 13, value: 0 }] }), 180_000); }),
+      at(220_000, (pubs, emit) => { const p = pubs[2]!;
+        emit(frameOf(p, 220_000, { stNum: p.stNum + 100, sqNum: 0, t: EPOCH + 220_000,
+          allData: [{ kind: "boolean", value: !p.value }, { kind: "bitstring", bits: 13, value: 0 }] }), 220_000); }),
+    ] },
 ];
+
