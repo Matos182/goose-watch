@@ -13,7 +13,8 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 ```
 
 - **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit. The baseline of publishers is learned from a clean capture.
-- **Models** (`src/triage.ts`): one request per alert asks *cause* (cyberattack / maintenance / device fault / unclear), *urgency* and *needs a human*. Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
+- **Models** (`src/triage.ts`, `src/pack2.ts`): the default pack 3 measures facts in code, asks the model which evidence pattern they match (or the cause, for classes the rule already explains), and maps the pattern to a cause (cyberattack / maintenance / device fault / unclear). Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
+- **Who looks** (`needsHuman()` in `src/triage.ts`): code decides. Severity 2 or 3, an unsure model, or a cyberattack reading means "a human checks now". The model's own needs-a-human answer is kept in reports only.
 - **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`.
 
 ## Run it
@@ -21,12 +22,13 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 Requirements: bun ≥ 1.4, tshark ≥ 4.4, Linux with unprivileged user namespaces. For the AI readings you also need Ollama ≥ 0.35 with a decision model (`nimble`, `tev1`, `tev1:0.8b`).
 
 ```sh
-bun test                                   # 42 tests, tshark as the decoder oracle
+bun test                                   # 52 tests, tshark as the decoder oracle
 bun src/cli.ts scenarios fixtures          # synthetic pcaps, one per scenario
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 1                          # isolated lab + board on http://127.0.0.1:8099 ; scripts/demo.sh stop
+GW_BOARD_ARGS="--models nimble:latest@http://127.0.0.1:11435" scripts/demo.sh 2   # one model only (half the RAM)
 scripts/watch-lab.sh 1                     # same lab as a tmux session: tmux -S /tmp/goosewatch.sock attach -r
-bun src/eval.ts nimble:latest --base http://127.0.0.1:11435   # model evaluation on the fixed gold set
+bun src/eval.ts nimble:latest --base http://127.0.0.1:11435 --gold gold/gold-v3.json --pack 3   # model evaluation on a fixed gold set
 ```
 
 The lab runs inside `unshare -rnm`: a private network namespace with one veth pair (`gwa` → `gwb`) and no uplink. Raw sockets refuse any interface that isn't named `gw*`, and they refuse any namespace that contains a real interface. Lab GOOSE therefore cannot reach a production network.
@@ -39,16 +41,17 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
 - Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 9/9).
-- Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 13/13).
-- Model evaluation on 39 gold cases, with labels and stop rule fixed beforehand (`docs/EVAL.md`):
+- Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 4x), with the same PDU timestamp ages (lab replay retimes each frame).
+- Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 
-  | Model | Verdict | Not sure | Confident accuracy | p50 (RTX 3080) |
-  |---|---|---|---|---|
-  | tev1:0.8b | STOP | 69% | 12/12 | 176 ms |
-  | tev1 (4B) | STOP | 67% | 13/13 | 426 ms |
-  | nimble (9B) | PASS | 8% | 0.92 | 560 ms |
+  | Model | Pack | Verdict | Not sure | Confident accuracy | Attacks caught | p50 |
+  |---|---|---|---|---|---|---|
+  | nimble (9B, GPU) | 1 | PASS | 8% | 0.92 | 60% | 545 ms |
+  | nimble (9B, GPU) | 3 | PASS | 8% | 1.00 | 80% | 475 ms |
+  | tev1 (4B, CPU) | 1 | STOP | 64% | 1.00 | 0% | 6.8 s |
+  | tev1 (4B, CPU) | 3 | PASS | 26% | 1.00 | 73% | 1.6 s |
 
-  Nimble called all 3 replay attacks "device fault" at 81–85%. The rule still raised them at severity 3.
+  On pack 1, nimble called every replay attack "device fault" at 81–85%. Pack 3 gets them right. Live, nimble still reads the poisoning jump as "device fault 0.68"; the rule raises it at severity 2 and the board says a human checks now.
 
 **Not measured:**
 
@@ -58,6 +61,12 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 - Model behaviour outside these 11 synthetic evidence patterns.
 
 The gold cases share one generator and are not independent field samples. Several alert classes nearly determine the label, so the eval mostly tests the two classes that need judgement: stNum regression and new publisher.
+
+## Use the pattern elsewhere
+
+- `docs/PATTERN.md`: rules, doubt, human, for any monitoring job, with examples for homes, offices, smart homes and solar.
+- `examples/home-watch/`: the pattern for a home or small-office network in one file (ARP: new device, network scan, fake router). `bun examples/home-watch/home.ts demo` runs it with no network access.
+- `docs/VIDEO.md`: the 2-minute contest video script built on this repo.
 
 ## Licence
 
