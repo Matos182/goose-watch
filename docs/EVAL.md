@@ -52,3 +52,9 @@ A model that STOPs is still allowed on the board, labelled "not reliable for thi
 **Held-out gold set:** `gold/gold-v2.json` is built by `bun src/gold.ts gold/gold-v2.json 300`, with seeds 300/400. It has the same 11 kinds and 39 cases, and none of them was seen while designing pack 2.
 
 **Stop rule:** unchanged (`STOP_RULE`). Pack 1 is re-run on gold-v2 so the comparison is like for like.
+
+## Pack 3, fixed 2026-10-02 before its first run
+
+Pack 2 plus one change: classes without a pattern hop get the measured facts together with v1's state, which carries the rule's meaning. Why: in the live story, Nimble on pack 2 read a forged status as a device fault at 0.81.
+
+**Held-out set:** `gold/gold-v3.json` (seeds 500/600). Packs 1, 2 and 3 all run on it. Stop rule unchanged.

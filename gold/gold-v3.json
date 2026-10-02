@@ -1,0 +1,1207 @@
+{
+  "version": 1,
+  "labels": [
+    "cyberattack",
+    "maintenance",
+    "device_fault"
+  ],
+  "cases": [
+    {
+      "id": "rogue-publisher-0-500",
+      "kind": "rogue-publisher",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|ROGUE/LLN0$GO$gcb1",
+        "srcMac": "02:66:66:66:66:01",
+        "gocbRef": "ROGUE/LLN0$GO$gcb1",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "rogue-publisher-1-500",
+      "kind": "rogue-publisher",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|ROGUE/LLN0$GO$gcb1",
+        "srcMac": "02:66:66:66:66:02",
+        "gocbRef": "ROGUE/LLN0$GO$gcb1",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "rogue-publisher-2-500",
+      "kind": "rogue-publisher",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|ROGUE/LLN0$GO$gcb1",
+        "srcMac": "02:66:66:66:66:03",
+        "gocbRef": "ROGUE/LLN0$GO$gcb1",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-0-500",
+      "kind": "spoofed-mac",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:66:66:66:66:02",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "02:1e:d0:00:00:11",
+          "datSet": "BAY1_CTRL/LLN0$dsPos"
+        },
+        "count": 1,
+        "lastMs": 1790848830000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 15,
+          "pduTimestampAgeMs": 30000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-1-500",
+      "kind": "spoofed-mac",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:66:66:66:66:02",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "02:1e:d0:00:00:12",
+          "datSet": "BAY2_PROT/LLN0$dsTrip"
+        },
+        "count": 1,
+        "lastMs": 1790848830000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 11,
+          "pduTimestampAgeMs": 30000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "spoofed-mac-2-500",
+      "kind": "spoofed-mac",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:66:66:66:66:02",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "02:1e:d0:00:00:13",
+          "datSet": "BB_PROT/LLN0$dsBlk"
+        },
+        "count": 1,
+        "lastMs": 1790848830000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": false,
+          "testFlag": false,
+          "simulationBit": false,
+          "sqNum": 0,
+          "stNum": 22,
+          "pduTimestampAgeMs": 6105,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "replay-0-500",
+      "kind": "replay",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848840000,
+        "detail": {
+          "stNum": 11,
+          "lastStNum": 14
+        },
+        "count": 1,
+        "lastMs": 1790848840000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -3,
+          "silenceBeforeMs": 950,
+          "sqNum": 7,
+          "stNum": 11,
+          "pduTimestampAgeMs": 39000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "replay-1-500",
+      "kind": "replay",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848840000,
+        "detail": {
+          "stNum": 7,
+          "lastStNum": 10
+        },
+        "count": 1,
+        "lastMs": 1790848840000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -3,
+          "silenceBeforeMs": 813,
+          "sqNum": 7,
+          "stNum": 7,
+          "pduTimestampAgeMs": 39000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "replay-2-500",
+      "kind": "replay",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848840000,
+        "detail": {
+          "stNum": 18,
+          "lastStNum": 21
+        },
+        "count": 1,
+        "lastMs": 1790848840000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -3,
+          "silenceBeforeMs": 83,
+          "sqNum": 7,
+          "stNum": 18,
+          "pduTimestampAgeMs": 39000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "poisoning-0-500",
+      "kind": "poisoning",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_JUMP",
+        "severity": 2,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848835000,
+        "detail": {
+          "stNum": 114,
+          "lastStNum": 14
+        },
+        "count": 1,
+        "lastMs": 1790848835000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 100,
+          "silenceBeforeMs": 950,
+          "sqNum": 0,
+          "stNum": 114,
+          "pduTimestampAgeMs": 0,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "CONFIG_CHANGE"
+          ]
+        }
+      }
+    },
+    {
+      "id": "poisoning-1-500",
+      "kind": "poisoning",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_JUMP",
+        "severity": 2,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848835000,
+        "detail": {
+          "stNum": 110,
+          "lastStNum": 10
+        },
+        "count": 1,
+        "lastMs": 1790848835000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 100,
+          "silenceBeforeMs": 813,
+          "sqNum": 0,
+          "stNum": 110,
+          "pduTimestampAgeMs": 0,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "CONFIG_CHANGE"
+          ]
+        }
+      }
+    },
+    {
+      "id": "poisoning-2-500",
+      "kind": "poisoning",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "STNUM_JUMP",
+        "severity": 2,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848835000,
+        "detail": {
+          "stNum": 121,
+          "lastStNum": 21
+        },
+        "count": 1,
+        "lastMs": 1790848835000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 100,
+          "silenceBeforeMs": 83,
+          "sqNum": 0,
+          "stNum": 121,
+          "pduTimestampAgeMs": 0,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "CONFIG_CHANGE"
+          ]
+        }
+      }
+    },
+    {
+      "id": "forged-status-0-500",
+      "kind": "forged-status",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "DATA_WITHOUT_STNUM",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848842000,
+        "detail": {
+          "stNum": 14,
+          "sqNum": 42
+        },
+        "count": 1,
+        "lastMs": 1790848842000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 950,
+          "sqNum": 42,
+          "stNum": 14,
+          "pduTimestampAgeMs": 42000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "forged-status-1-500",
+      "kind": "forged-status",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "DATA_WITHOUT_STNUM",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848842000,
+        "detail": {
+          "stNum": 10,
+          "sqNum": 42
+        },
+        "count": 1,
+        "lastMs": 1790848842000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 813,
+          "sqNum": 42,
+          "stNum": 10,
+          "pduTimestampAgeMs": 42000,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "forged-status-2-500",
+      "kind": "forged-status",
+      "label": "cyberattack",
+      "alert": {
+        "cls": "DATA_WITHOUT_STNUM",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848842000,
+        "detail": {
+          "stNum": 21,
+          "sqNum": 27
+        },
+        "count": 1,
+        "lastMs": 1790848842000,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 83,
+          "sqNum": 27,
+          "stNum": 21,
+          "pduTimestampAgeMs": 18105,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-mode-0-500",
+      "kind": "test-mode",
+      "label": "maintenance",
+      "alert": {
+        "cls": "TEST_MODE",
+        "severity": 1,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848830050,
+        "detail": {},
+        "count": 10,
+        "lastMs": 1790848839050,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 14,
+          "pduTimestampAgeMs": 30050,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-mode-1-500",
+      "kind": "test-mode",
+      "label": "maintenance",
+      "alert": {
+        "cls": "TEST_MODE",
+        "severity": 1,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848830187,
+        "detail": {},
+        "count": 10,
+        "lastMs": 1790848839187,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 10,
+          "pduTimestampAgeMs": 30187,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-mode-2-500",
+      "kind": "test-mode",
+      "label": "maintenance",
+      "alert": {
+        "cls": "TEST_MODE",
+        "severity": 1,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848830917,
+        "detail": {},
+        "count": 10,
+        "lastMs": 1790848839917,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 15,
+          "stNum": 21,
+          "pduTimestampAgeMs": 7022,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-0-500",
+      "kind": "simulation-bit",
+      "label": "maintenance",
+      "alert": {
+        "cls": "SIM_BIT",
+        "severity": 1,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848830050,
+        "detail": {},
+        "count": 5,
+        "lastMs": 1790848834050,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": true,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 14,
+          "pduTimestampAgeMs": 30050,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-1-500",
+      "kind": "simulation-bit",
+      "label": "maintenance",
+      "alert": {
+        "cls": "SIM_BIT",
+        "severity": 1,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848830187,
+        "detail": {},
+        "count": 5,
+        "lastMs": 1790848834187,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": true,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 10,
+          "pduTimestampAgeMs": 30187,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "simulation-bit-2-500",
+      "kind": "simulation-bit",
+      "label": "maintenance",
+      "alert": {
+        "cls": "SIM_BIT",
+        "severity": 1,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848830917,
+        "detail": {},
+        "count": 5,
+        "lastMs": 1790848834917,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": true,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 15,
+          "stNum": 21,
+          "pduTimestampAgeMs": 7022,
+          "confRevChanged": false,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-set-0-500",
+      "kind": "test-set",
+      "label": "maintenance",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|TESTSET/LLN0$GO$gcbSim",
+        "srcMac": "02:7e:57:00:00:01",
+        "gocbRef": "TESTSET/LLN0$GO$gcbSim",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": true,
+          "simulationBit": true,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-set-1-500",
+      "kind": "test-set",
+      "label": "maintenance",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|TESTSET/LLN0$GO$gcbSim",
+        "srcMac": "02:7e:57:00:00:02",
+        "gocbRef": "TESTSET/LLN0$GO$gcbSim",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": true,
+          "simulationBit": true,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "test-set-2-500",
+      "kind": "test-set",
+      "label": "maintenance",
+      "alert": {
+        "cls": "NEW_PUBLISHER",
+        "severity": 3,
+        "key": "0099|TESTSET/LLN0$GO$gcbSim",
+        "srcMac": "02:7e:57:00:00:03",
+        "gocbRef": "TESTSET/LLN0$GO$gcbSim",
+        "tMs": 1790848830000,
+        "detail": {
+          "expectedMac": "none",
+          "datSet": "X/LLN0$ds"
+        },
+        "count": 30,
+        "lastMs": 1790848859000,
+        "context": {
+          "publisherInBaseline": false,
+          "macMatchesBaseline": false,
+          "testFlag": true,
+          "simulationBit": true,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 0,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "config-in-test-0-500",
+      "kind": "config-in-test",
+      "label": "maintenance",
+      "alert": {
+        "cls": "CONFIG_CHANGE",
+        "severity": 2,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848830050,
+        "detail": {
+          "confRev": 2,
+          "expectedConfRev": 1,
+          "datSet": "BAY1_CTRL/LLN0$dsPos"
+        },
+        "count": 30,
+        "lastMs": 1790848859050,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 14,
+          "pduTimestampAgeMs": 30050,
+          "confRevChanged": true,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "config-in-test-1-500",
+      "kind": "config-in-test",
+      "label": "maintenance",
+      "alert": {
+        "cls": "CONFIG_CHANGE",
+        "severity": 2,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848830187,
+        "detail": {
+          "confRev": 2,
+          "expectedConfRev": 1,
+          "datSet": "BAY2_PROT/LLN0$dsTrip"
+        },
+        "count": 39,
+        "lastMs": 1790848859548,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 30,
+          "stNum": 10,
+          "pduTimestampAgeMs": 30187,
+          "confRevChanged": true,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "config-in-test-2-500",
+      "kind": "config-in-test",
+      "label": "maintenance",
+      "alert": {
+        "cls": "CONFIG_CHANGE",
+        "severity": 2,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848830917,
+        "detail": {
+          "confRev": 2,
+          "expectedConfRev": 1,
+          "datSet": "BB_PROT/LLN0$dsBlk"
+        },
+        "count": 30,
+        "lastMs": 1790848859917,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": true,
+          "simulationBit": false,
+          "stNumDelta": 0,
+          "silenceBeforeMs": 1000,
+          "sqNum": 15,
+          "stNum": 21,
+          "pduTimestampAgeMs": 7022,
+          "confRevChanged": true,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-0-500",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848831187,
+        "detail": {
+          "silentMs": 2137,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848831187,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2137,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-1-500",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848831324,
+        "detail": {
+          "silentMs": 2137,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848831324,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2137,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-2-500",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848832050,
+        "detail": {
+          "silentMs": 2133,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848832050,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2133,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-0-600",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848831187,
+        "detail": {
+          "silentMs": 2137,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848831187,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2137,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-1-600",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848831324,
+        "detail": {
+          "silentMs": 2137,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848831324,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2137,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "link-loss-2-600",
+      "kind": "link-loss",
+      "label": "device_fault",
+      "alert": {
+        "cls": "TTL_EXPIRY",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848831442,
+        "detail": {
+          "silentMs": 2118,
+          "timeAllowedToLive": 2000
+        },
+        "count": 1,
+        "lastMs": 1790848831442,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "silenceBeforeMs": 2118,
+          "otherAlertsLast60s": []
+        }
+      }
+    },
+    {
+      "id": "ied-restart-0-500",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 14
+        },
+        "count": 30,
+        "lastMs": 1790848859023,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -13,
+          "silenceBeforeMs": 8951,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ied-restart-1-500",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 10
+        },
+        "count": 39,
+        "lastMs": 1790848859548,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -9,
+          "silenceBeforeMs": 8814,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ied-restart-2-500",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 21
+        },
+        "count": 30,
+        "lastMs": 1790848859023,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -20,
+          "silenceBeforeMs": 8084,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ied-restart-0-600",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0011|BAY1_CTRL/LLN0$GO$gcbPos",
+        "srcMac": "02:1e:d0:00:00:11",
+        "gocbRef": "BAY1_CTRL/LLN0$GO$gcbPos",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 12
+        },
+        "count": 30,
+        "lastMs": 1790848859023,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -11,
+          "silenceBeforeMs": 8951,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ied-restart-1-600",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0012|BAY2_PROT/LLN0$GO$gcbTrip",
+        "srcMac": "02:1e:d0:00:00:12",
+        "gocbRef": "BAY2_PROT/LLN0$GO$gcbTrip",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 37
+        },
+        "count": 39,
+        "lastMs": 1790848859106,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -36,
+          "silenceBeforeMs": 8814,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ied-restart-2-600",
+      "kind": "ied-restart",
+      "label": "device_fault",
+      "alert": {
+        "cls": "STNUM_REGRESSION",
+        "severity": 3,
+        "key": "0013|BB_PROT/LLN0$GO$gcbBlk",
+        "srcMac": "02:1e:d0:00:00:13",
+        "gocbRef": "BB_PROT/LLN0$GO$gcbBlk",
+        "tMs": 1790848838001,
+        "detail": {
+          "stNum": 1,
+          "lastStNum": 15
+        },
+        "count": 39,
+        "lastMs": 1790848859904,
+        "context": {
+          "publisherInBaseline": true,
+          "macMatchesBaseline": true,
+          "testFlag": false,
+          "simulationBit": false,
+          "stNumDelta": -14,
+          "silenceBeforeMs": 8677,
+          "sqNum": 0,
+          "stNum": 1,
+          "pduTimestampAgeMs": 1,
+          "confRevChanged": false,
+          "otherAlertsLast60s": [
+            "TTL_EXPIRY"
+          ]
+        }
+      }
+    }
+  ]
+}

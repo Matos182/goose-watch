@@ -11,7 +11,7 @@
 // The rule's severity is untouched in every path.
 
 import type { Alert } from "./rules";
-import { CAUSES, distribution, prob, QUESTIONS, validate, type Cause, type SystemOneAdapter, type TriageResult } from "./triage";
+import { buildState, CAUSES, distribution, prob, QUESTIONS, validate, type Cause, type SystemOneAdapter, type TriageResult } from "./triage";
 import { safeText } from "./rules";
 
 export const PACK2_VERSION = "triage-pack-2";
@@ -75,4 +75,17 @@ function fromPatterns(raw: any, model: string) {
 export async function triage2(ad: SystemOneAdapter, a: Alert): Promise<TriageResult> {
   if (PATTERN_CLASSES.has(a.cls)) return ad.ask(facts(a), PATTERN_QUESTION, (raw) => fromPatterns(raw, ad.model));
   return ad.ask(facts(a), QUESTIONS, (raw) => ({ ...validate(raw, ad.model), pack: PACK2_VERSION }));
+}
+
+// triage-pack-3: pack 2, except that classes without a pattern hop get the facts AND v1's state
+// (which carries the rule's meaning). Found live: without the rule meaning, Nimble read a forged
+// status (DATA_WITHOUT_STNUM) as a device fault at 0.81.
+export const PACK3_VERSION = "triage-pack-3";
+
+export async function triage3(ad: SystemOneAdapter, a: Alert): Promise<TriageResult> {
+  if (PATTERN_CLASSES.has(a.cls)) {
+    const r = await ad.ask(facts(a), PATTERN_QUESTION, (raw) => fromPatterns(raw, ad.model));
+    return r.ok ? { ok: true, triage: { ...r.triage, pack: PACK3_VERSION } } : r;
+  }
+  return ad.ask({ ...buildState(a, a.context), ...facts(a) }, QUESTIONS, (raw) => ({ ...validate(raw, ad.model), pack: PACK3_VERSION }));
 }

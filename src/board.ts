@@ -15,9 +15,12 @@ const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) +
 const file = opt("--alerts", "reports/live/board.jsonl");
 const port = Number(opt("--port", "8099"));
 const base = opt("--base", "http://127.0.0.1:11435");
-const models = opt("--models", "nimble:latest,tev1:latest").split(",");
+// model@base lets each model live on its own server (e.g. nimble on the GPU, tev1 on a CPU-only Ollama),
+// so two models that don't fit in VRAM together never evict each other mid-demo.
+const specs = opt("--models", "nimble:latest@http://127.0.0.1:11435,tev1:latest@http://127.0.0.1:11436").split(",");
+const models = specs.map((m) => m.split("@")[0]!);
 const pack = opt("--pack", "2");
-const adapters = models.map((m) => new SystemOneAdapter(base, m, 30_000));
+const adapters = specs.map((m) => new SystemOneAdapter(m.split("@")[1] ?? base, m.split("@")[0]!, 30_000));
 
 interface Reading { model: string; text: string; notSure: boolean; cause?: string; p?: number; needsHuman?: number; dist?: Record<string, number> }
 interface Item { id: number; alert: Alert; plain: string; readings: Reading[] }
@@ -96,4 +99,4 @@ Bun.serve({
     return new Response("not found", { status: 404 });
   },
 });
-console.log(`board on http://127.0.0.1:${port} · pack ${pack} · models ${models.join(", ")} at ${base} · tailing ${file}`);
+console.log(`board on http://127.0.0.1:${port} · pack ${pack} · models ${specs.join(", ")} · tailing ${file}`);
