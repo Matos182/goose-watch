@@ -29,8 +29,10 @@ const FIELDS = [
   "goose.boolean", "goose.integer", "goose.unsigned", "goose.float_value", "goose.bit_string",
 ];
 
-export function tsharkArgs(source: { file: string } | { iface: string }): string[] {
-  const src = "file" in source ? ["-r", source.file] : ["-i", source.iface, "-l"];
+export type Source = { file: string } | { iface: string } | { stdin: true };
+
+export function tsharkArgs(source: Source): string[] {
+  const src = "file" in source ? ["-r", source.file] : "iface" in source ? ["-i", source.iface, "-l"] : ["-r", "-", "-l"];
   return [...src, "-Y", "goose", "-T", "ek", ...FIELDS.flatMap((f) => ["-e", f])];
 }
 
@@ -76,8 +78,8 @@ export function parseEkLine(line: string): GooseEvent | null {
   };
 }
 
-export async function* decode(source: { file: string } | { iface: string }): AsyncGenerator<GooseEvent> {
-  const proc = Bun.spawn(["tshark", ...tsharkArgs(source)], { stdout: "pipe", stderr: "pipe" });
+export async function* decode(source: Source): AsyncGenerator<GooseEvent> {
+  const proc = Bun.spawn(["tshark", ...tsharkArgs(source)], { stdin: "stdin" in source ? "inherit" : "ignore", stdout: "pipe", stderr: "pipe" });
   const reader = proc.stdout.pipeThrough(new TextDecoderStream()).getReader();
   let buf = "";
   for (;;) {

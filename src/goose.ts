@@ -163,3 +163,24 @@ export function writePcap(packets: Packet[]): Uint8Array {
   }
   return buf;
 }
+
+export function readPcap(buf: Uint8Array): Packet[] {
+  const v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (v.getUint32(0, true) !== 0xa1b2c3d4) throw new Error("not a little-endian microsecond pcap");
+  const out: Packet[] = [];
+  for (let o = 24; o + 16 <= buf.length; ) {
+    const tMs = v.getUint32(o, true) * 1000 + v.getUint32(o + 4, true) / 1000;
+    const n = v.getUint32(o + 8, true);
+    out.push({ tMs, bytes: buf.slice(o + 16, o + 16 + n) });
+    o += 16 + n;
+  }
+  return out;
+}
+
+export function pcapHeader(): Uint8Array {
+  return writePcap([]);
+}
+
+export function pcapRecord(p: Packet): Uint8Array {
+  return writePcap([p]).slice(24);
+}
