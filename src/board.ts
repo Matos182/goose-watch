@@ -8,7 +8,7 @@ import type { Alert } from "./rules";
 import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
 import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
-import { triage2 } from "./pack2";
+import { triage2, triage3 } from "./pack2";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
@@ -19,7 +19,7 @@ const base = opt("--base", "http://127.0.0.1:11435");
 // so two models that don't fit in VRAM together never evict each other mid-demo.
 const specs = opt("--models", "nimble:latest@http://127.0.0.1:11435,tev1:latest@http://127.0.0.1:11436").split(",");
 const models = specs.map((m) => m.split("@")[0]!);
-const pack = opt("--pack", "2");
+const pack = opt("--pack", "3");
 const adapters = specs.map((m) => new SystemOneAdapter(m.split("@")[1] ?? base, m.split("@")[0]!, 30_000));
 
 interface Reading { model: string; text: string; notSure: boolean; cause?: string; p?: number; needsHuman?: number; dist?: Record<string, number> }
@@ -52,7 +52,7 @@ function onAlert(a: Alert) {
   broadcast("alert", item);
   for (const [i, ad] of adapters.entries()) {
     queue = queue.then(async () => {
-      const rd = reading(models[i]!, a, pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context));
+      const rd = reading(models[i]!, a, pack === "3" ? await triage3(ad, a) : pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context));
       item.readings.push(rd);
       broadcast("reading", { id: item.id, reading: rd });
     });
