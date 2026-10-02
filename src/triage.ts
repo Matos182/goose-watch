@@ -144,11 +144,11 @@ export function validate(raw: any, model: string): Omit<Triage, "latencyMs"> {
 /**
  * Whether a human must look now is decided in code, never by the model's needs_human Noul.
  * Measured on gold-v3 (C18): the Noul said 0.01 on replays and 0.99 on harmless restarts, so it
- * carries no signal. A human is needed when the rule is severity 3, when the model is not sure,
+ * carries no signal. A human is needed when the rule is severity 2 or 3, when the model is not sure,
  * or when it reads a cyberattack. The Noul stays in reports as data only.
  */
 export function needsHuman(a: Alert, t: TriageResult, gate: number): boolean {
-  if (a.severity === 3 || !t.ok) return true;
+  if (a.severity >= 2 || !t.ok) return true;
   const notSure = t.triage.causeP < gate || t.triage.causeWinner === "unclear";
   return notSure || t.triage.causeWinner === "cyberattack";
 }

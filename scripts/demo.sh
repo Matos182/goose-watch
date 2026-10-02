@@ -29,6 +29,6 @@ while true; do
 done
 INNER
 echo $! > reports/live/lab.pid
-nohup bun src/board.ts > reports/live/board.log 2>&1 &
+nohup bun src/board.ts ${GW_BOARD_ARGS:-} > reports/live/board.log 2>&1 &
 echo $! > reports/live/board.pid
 sleep 1; cat reports/live/board.log
