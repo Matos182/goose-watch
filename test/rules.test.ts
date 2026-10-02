@@ -45,7 +45,7 @@ describe("C1/C2 scenarios decode losslessly through tshark", () => {
 describe("C3/C4 every scenario raises exactly its expected classes", () => {
   for (const s of SCENARIOS) {
     test(`${s.name} → ${s.expect.join(",") || "silence"}`, () => {
-      const classes = [...new Set(run(s.name).map((a) => a.cls))].sort();
+      const classes: string[] = [...new Set(run(s.name).map((a) => a.cls))].sort();
       expect(classes).toEqual([...s.expect].sort());
     });
   }

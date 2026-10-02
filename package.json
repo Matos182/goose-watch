@@ -7,5 +7,9 @@
   "scripts": {
     "test": "bun test",
     "scenarios": "bun src/cli.ts scenarios fixtures"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "^7.0.2"
   }
 }

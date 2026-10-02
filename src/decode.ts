@@ -12,6 +12,7 @@ export interface GooseEvent {
   timeAllowedToLive: number;
   datSet: string;
   goID: string;
+  pduTMs: number | null; // the PDU's own timestamp t
   stNum: number;
   sqNum: number;
   test: boolean;
@@ -23,7 +24,7 @@ export interface GooseEvent {
 
 const FIELDS = [
   "frame.time_epoch", "eth.src", "eth.dst", "vlan.id", "goose.appid", "goose.reserve1.s_bit",
-  "goose.gocbRef", "goose.timeAllowedtoLive", "goose.datSet", "goose.goID", "goose.stNum", "goose.sqNum",
+  "goose.gocbRef", "goose.timeAllowedtoLive", "goose.datSet", "goose.goID", "goose.t", "goose.stNum", "goose.sqNum",
   "goose.simulation", "goose.confRev", "goose.ndsCom", "goose.numDatSetEntries",
   "goose.boolean", "goose.integer", "goose.unsigned", "goose.float_value", "goose.bit_string",
 ];
@@ -35,6 +36,15 @@ export function tsharkArgs(source: { file: string } | { iface: string }): string
 
 const one = (l: Record<string, string[]>, k: string): string | undefined => l[k]?.[0];
 const bool = (v: string | undefined) => v === "True" || v === "1";
+
+// tshark prints t as "Sep 21, 2026 14:13:20.122999966 UTC".
+export function parseGooseTime(v: string | undefined): number | null {
+  const m = v?.match(/^(\w{3}) +(\d+), (\d{4}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d+))? UTC$/);
+  if (!m) return null;
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(m[1]!);
+  const ms = Math.round(Number(`0.${m[7] ?? "0"}`) * 1000);
+  return Date.UTC(Number(m[3]), mon, Number(m[2]), Number(m[4]), Number(m[5]), Number(m[6])) + ms;
+}
 
 export function parseEkLine(line: string): GooseEvent | null {
   if (!line.startsWith('{"timestamp"')) return null;
@@ -52,6 +62,7 @@ export function parseEkLine(line: string): GooseEvent | null {
     timeAllowedToLive: Number(one(l, "goose_timeAllowedtoLive")),
     datSet: one(l, "goose_datSet") ?? "",
     goID: one(l, "goose_goID") ?? "",
+    pduTMs: parseGooseTime(one(l, "goose_t")),
     stNum: Number(one(l, "goose_stNum")),
     sqNum: Number(one(l, "goose_sqNum")),
     test: bool(one(l, "goose_simulation")),

@@ -2,6 +2,7 @@
 // never raise or clear one.
 
 import type { GooseEvent } from "./decode";
+import type { AlertContext } from "./triage";
 
 export type AlertClass =
   | "NEW_PUBLISHER" | "CONFIG_CHANGE" | "STNUM_REGRESSION" | "STNUM_JUMP" | "SQNUM_RESET"
@@ -50,6 +51,7 @@ export interface Alert {
   detail: Record<string, number | string | boolean>;
   count: number; // occurrences folded into this alert
   lastMs: number; // last occurrence; a condition that keeps recurring stays one alert
+  context: AlertContext; // evidence snapshot handed to the model
 }
 
 export const streamKey = (e: Pick<GooseEvent, "appId" | "gocbRef">) => `${e.appId.toString(16).padStart(4, "0")}|${e.gocbRef}`;
@@ -84,6 +86,8 @@ export class RuleEngine {
     this.known = new Map(baseline.publishers.map((p) => [p.key, p]));
   }
 
+  private ctx: Omit<AlertContext, "otherAlertsLast60s"> = { publisherInBaseline: false, macMatchesBaseline: false, testFlag: false, simulationBit: false };
+
   private raise(cls: AlertClass, e: Pick<GooseEvent, "tMs" | "srcMac" | "gocbRef" | "appId">, detail: Alert["detail"]) {
     const key = streamKey(e);
     const id = `${cls}|${key}`;
@@ -94,7 +98,9 @@ export class RuleEngine {
       this.onAlert(prev, false);
       return;
     }
-    const a: Alert = { cls, severity: RULE_SEVERITY[cls], key, srcMac: e.srcMac, gocbRef: e.gocbRef, tMs: e.tMs, detail, count: 1, lastMs: e.tMs };
+    const others = this.alerts.filter((x) => e.tMs - x.lastMs < 60_000).map((x) => x.cls);
+    const context: AlertContext = { ...this.ctx, otherAlertsLast60s: [...new Set(others)] };
+    const a: Alert = { cls, severity: RULE_SEVERITY[cls], key, srcMac: e.srcMac, gocbRef: e.gocbRef, tMs: e.tMs, detail, count: 1, lastMs: e.tMs, context };
     this.open.set(id, a);
     this.alerts.push(a);
     this.onAlert(a, true);
@@ -107,6 +113,7 @@ export class RuleEngine {
         s.expired = true;
         const [appHex, ...ref] = key.split("|");
         const known = this.known.get(key);
+        this.ctx = { publisherInBaseline: !!known, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - s.lastSeen };
         this.raise("TTL_EXPIRY", { tMs: now, srcMac: known?.srcMac ?? "", gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
           { silentMs: now - s.lastSeen, timeAllowedToLive: s.tal });
       }
@@ -117,6 +124,17 @@ export class RuleEngine {
     this.tick(e.tMs);
     const key = streamKey(e);
     const known = this.known.get(key);
+    const prev = this.state.get(key);
+    this.ctx = {
+      publisherInBaseline: !!known,
+      macMatchesBaseline: known?.srcMac === e.srcMac,
+      testFlag: e.test,
+      simulationBit: e.simulationBit,
+      ...(prev && known?.srcMac === e.srcMac && { stNumDelta: e.stNum - prev.stNum, silenceBeforeMs: e.tMs - prev.lastSeen }),
+      sqNum: e.sqNum,
+      ...(e.pduTMs !== null && { pduTimestampAgeMs: e.tMs - e.pduTMs }),
+      ...(known && { confRevChanged: known.confRev !== e.confRev }),
+    };
     if (!known || known.srcMac !== e.srcMac) {
       this.raise("NEW_PUBLISHER", e, { expectedMac: known?.srcMac ?? "none", datSet: e.datSet });
     } else if (known.confRev !== e.confRev || known.datSet !== e.datSet || known.numDatSetEntries !== e.numDatSetEntries) {
