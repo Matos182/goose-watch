@@ -4,6 +4,7 @@
 import { mkdirSync } from "node:fs";
 import type { GoldCase } from "./gold";
 import { CAUSES, SystemOneAdapter, type Cause, type TriageResult } from "./triage";
+import { triage2 } from "./pack2";
 
 // Fixed in docs/EVAL.md before the first model run. Do not tune on this gold set.
 export const STOP_RULE = {
@@ -84,7 +85,7 @@ if (import.meta.main) {
   const adapter = new SystemOneAdapter(opt("--base", "http://127.0.0.1:11434"), model, 120_000);
   const results: TriageResult[] = [];
   for (const c of gold.cases) {
-    const r = await adapter.triage(c.alert, c.alert.context);
+    const r = opt("--pack", "1") === "2" ? await triage2(adapter, c.alert) : await adapter.triage(c.alert, c.alert.context);
     results.push(r);
     process.stderr.write(`${c.id.padEnd(26)} ${c.label.padEnd(13)} ${r.ok ? `${r.triage.causeWinner} ${r.triage.causeP.toFixed(2)} ${Math.round(r.triage.latencyMs)}ms` : `FAIL ${r.failure}`}\n`);
   }
@@ -92,7 +93,9 @@ if (import.meta.main) {
     predictions: gold.cases.map((c, i) => ({ id: c.id, label: c.label, result: results[i] })) };
   const out = opt("--out", "reports");
   mkdirSync(out, { recursive: true });
-  const file = `${out}/eval-${model.replace(/[^a-z0-9.]+/gi, "_")}.json`;
+  const tag = opt("--pack", "1") === "2" ? "-pack2" : "";
+  const goldTag = opt("--gold", "gold/gold.json").includes("v2") ? "-goldv2" : "";
+  const file = `${out}/eval-${model.replace(/[^a-z0-9.]+/gi, "_")}${tag}${goldTag}.json`;
   await Bun.write(file, JSON.stringify(report, null, 2) + "\n");
   console.log(`${model}: ${report.verdict}${report.reasons.length ? " (" + report.reasons.join("; ") + ")" : ""} → ${file}`);
 }

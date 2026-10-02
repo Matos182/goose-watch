@@ -82,14 +82,14 @@ export interface GoldCase {
 }
 
 /** device_fault kinds get two seeds so each label has >= 12 cases. */
-export async function buildGold(): Promise<GoldCase[]> {
+export async function buildGold(seedBase = 100): Promise<GoldCase[]> {
   const dir = mkdtempSync(join(tmpdir(), "goose-gold-"));
   const basePcap = join(dir, "baseline.pcap");
   await Bun.write(basePcap, writePcap(generate(SCENARIOS[0]!)));
   const baseline: Baseline = learn(await decodeAll(basePcap));
   const cases: GoldCase[] = [];
   for (const k of KINDS) {
-    const seeds = k.label === "device_fault" ? [100, 200] : [100];
+    const seeds = k.label === "device_fault" ? [seedBase, seedBase + 100] : [seedBase];
     for (const seed of seeds) for (const pub of [0, 1, 2]) {
       const s: Scenario = { name: `${k.name}-${pub}-${seed}`, description: "", expect: [], durationMs: 60_000, seed: seed + pub, mutators: k.build(pub) };
       const file = join(dir, `${s.name}.pcap`);
@@ -106,7 +106,7 @@ export async function buildGold(): Promise<GoldCase[]> {
 
 if (import.meta.main) {
   const out = Bun.argv[2] ?? "gold/gold.json";
-  const cases = await buildGold();
+  const cases = await buildGold(Number(Bun.argv[3] ?? "100"));
   await Bun.write(out, JSON.stringify({ version: 1, labels: ["cyberattack", "maintenance", "device_fault"], cases }, null, 2) + "\n");
   const by = cases.reduce<Record<string, number>>((m, c) => ((m[c.label] = (m[c.label] ?? 0) + 1), m), {});
   console.log(`${cases.length} gold cases → ${out}`, by);

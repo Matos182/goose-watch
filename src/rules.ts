@@ -133,6 +133,7 @@ export class RuleEngine {
       simulationBit: e.simulationBit,
       ...(prev && known?.srcMac === e.srcMac && { stNumDelta: e.stNum - prev.stNum, silenceBeforeMs: e.tMs - prev.lastSeen }),
       sqNum: e.sqNum,
+      stNum: e.stNum,
       ...(e.pduTMs !== null && { pduTimestampAgeMs: e.tMs - e.pduTMs }),
       ...(known && { confRevChanged: known.confRev !== e.confRev }),
     };

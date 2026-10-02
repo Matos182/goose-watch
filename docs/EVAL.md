@@ -40,3 +40,15 @@ A model that STOPs is still allowed on the board, labelled "not reliable for thi
 ## Reported per model
 
 `reports/eval-<model>.json`: per-label precision (Wilson 95%) and recall, confident accuracy, not-sure rate, multi-class Brier score, latency p50/p95, typed failures and every prediction.
+
+## Pack 2 (hops), fixed 2026-10-02 before its first run
+
+`src/pack2.ts` works in hops:
+
+- **Hop 0 (code):** measures the facts.
+- **Hop 1 (model):** a System One Choice between evidence patterns (replay, restart, test equipment, impersonation, other). It runs only for alert classes whose cause depends on the evidence: STNUM_REGRESSION, NEW_PUBLISHER and SQNUM_RESET.
+- **Hop 2 (code):** maps each pattern to a cause.
+
+**Held-out gold set:** `gold/gold-v2.json` is built by `bun src/gold.ts gold/gold-v2.json 300`, with seeds 300/400. It has the same 11 kinds and 39 cases, and none of them was seen while designing pack 2.
+
+**Stop rule:** unchanged (`STOP_RULE`). Pack 1 is re-run on gold-v2 so the comparison is like for like.

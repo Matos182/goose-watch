@@ -37,6 +37,7 @@ export interface AlertContext {
   testFlag: boolean;
   simulationBit: boolean;
   stNumDelta?: number; // new - last accepted
+  stNum?: number; // the message's own state number
   sqNum?: number;
   pduTimestampAgeMs?: number; // frame arrival - PDU t
   silenceBeforeMs?: number; // gap since the stream's previous frame
@@ -83,13 +84,18 @@ export class SystemOneAdapter {
   }
 
   async triage(a: Alert, ctx: AlertContext): Promise<TriageResult> {
+    return this.ask(buildState(a, ctx), QUESTIONS, (raw) => validate(raw, this.model));
+  }
+
+  /** One System One request with any question set; `check` turns the raw answer into a Triage or throws. */
+  async ask(state: object, questions: object, check: (raw: any) => Omit<Triage, "latencyMs">): Promise<TriageResult> {
     const t0 = performance.now();
     let res: Response;
     try {
       res = await fetch(`${this.base}/v1/systemone`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ model: this.model, state: buildState(a, ctx), questions: QUESTIONS }),
+        body: JSON.stringify({ model: this.model, state, questions }),
         redirect: "error",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -101,19 +107,19 @@ export class SystemOneAdapter {
     const body = await res.text();
     if (body.length > 64_000) return { ok: false, failure: "invalid_answer", detail: "oversized" };
     try {
-      return { ok: true, triage: { ...validate(JSON.parse(body), this.model), latencyMs: performance.now() - t0 } };
+      return { ok: true, triage: { ...check(JSON.parse(body)), latencyMs: performance.now() - t0 } };
     } catch (e) {
       return { ok: false, failure: "invalid_answer", detail: (e as Error).message };
     }
   }
 }
 
-const prob = (x: unknown): number => {
+export const prob = (x: unknown): number => {
   if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 1) throw new Error("probability out of range");
   return x;
 };
 
-function distribution(raw: unknown, keys: readonly string[]): Record<string, number> {
+export function distribution(raw: unknown, keys: readonly string[]): Record<string, number> {
   if (typeof raw !== "object" || raw === null) throw new Error("missing probabilities");
   const r = raw as Record<string, unknown>;
   if (Object.keys(r).length !== keys.length || !keys.every((k) => k in r)) throw new Error("probability keys differ from criteria");
