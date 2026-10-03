@@ -67,7 +67,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 - Any real IED, real substation traffic, or real mirror port.
 - PRP/HSR duplicate handling.
-- Performance at bus scale. Live capture has no kernel capture filter yet (it could not be verified here), so tshark dissects every frame on the mirror port; on a bus that also carries Sampled Values, measure CPU before relying on it.
+- Performance at bus scale. Live capture (`run --iface`) hands tshark a kernel capture filter, `ether proto 0x88b8 or (vlan and ether proto 0x88b8)`, so Sampled Values and other traffic never reach the dissector. It is proven on a Linux veth pair with VLAN rx offload off and on (`scripts/capture-filter-probe.sh`), not on a real NIC, and double-tagged (QinQ) frames are not matched. Measure CPU on a real bus before relying on it.
 - Model behaviour outside these 11 synthetic evidence patterns.
 
 The gold cases share one generator and are not independent field samples. Several alert classes nearly determine the label, so the eval mostly tests the two classes that need judgement: stNum regression and new publisher.

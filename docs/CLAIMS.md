@@ -36,6 +36,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C31** A baseline publisher that sends nothing after the monitor starts raises TTL_EXPIRY (neverSeen) once its learned time-allowed-to-live and a 10 s start-up grace are over. Probe: `test/robustness.test.ts`.
 - [x] **C32** A repeat folded into an open alert is printed by `run` at most once per 10 s with its running count, the board updates the card's count, and a restarted board shows the current run again without asking the models. Probe: `test/robustness.test.ts`; board stream checked.
 - [x] **C33** `run --stdin` times silence by the frame clock, so a recorded capture piped in raises the same alerts as `--file`; tshark's stderr is read while capturing and an unreadable tshark line is skipped. Probe: `test/live.test.ts`.
+- [x] **C36** `run --iface` captures through a kernel filter that keeps every GOOSE frame, untagged or behind one 802.1Q tag, and drops everything else; files and stdin take none. Probe: `scripts/capture-filter-probe.sh` (Linux veth, VLAN rx offload off and on: all GOOSE kept, all Sampled Values noise dropped, a vlan-only mutant loses the untagged half, no filter lets the noise through) and `test/live.test.ts`.
 - [x] **C34** Over 1 000 seeded random sequences of traffic, forgeries and garbage: no stream state holds a non-finite number, the anchor never moves back without restart evidence, every bound holds, every alert carries its rule's severity, and the engine is deterministic. Probe: `test/properties.test.ts`.
 
 ## Local triage

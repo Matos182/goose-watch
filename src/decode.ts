@@ -33,8 +33,13 @@ const FIELDS = [
 
 export type Source = { file: string } | { iface: string } | { stdin: true };
 
+// Kernel capture filter for live interfaces: GOOSE untagged or behind one 802.1Q tag. `vlan` shifts the
+// offsets for what follows it, so the tagged test sits last. Without it tshark dissects every frame on the
+// mirror port (Sampled Values included). Files and stdin take no capture filter: tshark refuses -f with -r.
+export const CAPTURE_FILTER = "ether proto 0x88b8 or (vlan and ether proto 0x88b8)";
+
 export function tsharkArgs(source: Source): string[] {
-  const src = "file" in source ? ["-r", source.file] : "iface" in source ? ["-i", source.iface, "-l"] : ["-r", "-", "-l"];
+  const src = "file" in source ? ["-r", source.file] : "iface" in source ? ["-i", source.iface, "-f", CAPTURE_FILTER, "-l"] : ["-r", "-", "-l"];
   return [...src, "-Y", "goose", "-T", "ek", ...FIELDS.flatMap((f) => ["-e", f])];
 }
 
