@@ -26,7 +26,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 82 tests, tshark as the decoder oracle
+bun install && bun test                    # 94 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -50,7 +50,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 **Measured, on this repository's synthetic traffic only:**
 
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
-- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10), and undoing any one hardening guard does too (`bun scripts/mutate-hardening.ts`, 20/20 named guards).
+- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10), and undoing any one hardening guard does too (`bun scripts/mutate-hardening.ts`, 22/22 named guards).
 - Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 4x), with the same PDU timestamp ages (lab replay retimes each frame).
 - Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 
@@ -78,8 +78,8 @@ The gold cases share one generator and are not independent field samples. Severa
 - A forward forgery: a frame one state ahead with forged values is a normal state change. The real relay's next frame then reads as STNUM_REGRESSION (severity 3), which is the alarm, but the monitor cannot tell which of the two sources is genuine.
 - Closing both needs authenticated GOOSE or a second, independent view of the same signal, for example the relay's own state read over MMS.
 - A relay whose clock is more than 5 s behind (or 1 s ahead of) the sensor never shows restart evidence: after a reboot it keeps raising STNUM_REGRESSION until a person looks. A relay that keeps its stNum across a reboot shows as TTL_EXPIRY then SQNUM_RESET, and is followed normally after that. stNum and sqNum wrap-around at 2^32 is treated as a regression.
-- A baseline publisher that is already silent when the monitor starts is not reported. The Ed2 `simulation` flag is read as the Ed1 test flag, quality `test` bits and Beh/Mod are not read, and values are compared as booleans, integers, floats and bit strings only, grouped by type: a change of order or of type inside the dataset (for example integer 7 to unsigned 7) is not seen, and neither is a change in other MMS types.
-- Timing protections rely on a baseline learned by this version, which records each publisher's time-allowed-to-live; `run` warns when a baseline lacks it. Repeats of an open alert are not printed by `run` or shown on the board; an ongoing condition is announced again each minute. The board starts at the end of the alert file, so after a board restart a still-open condition shows again only when it is next announced.
+- The Ed2 `simulation` flag is read as the Ed1 test flag, and quality `test` bits and Beh/Mod are not read, so an Ed2 relay in test mode raises nothing by itself. The dataset is compared byte for byte, but its meaning (which member is which signal) needs the SCL/SCD import that is not built yet.
+- Timing protections rely on a baseline learned by this version, which records each publisher's time-allowed-to-live; `run` warns when a baseline lacks it. Repeats of an open alert are printed at most every 10 s and a condition that keeps going is announced again each minute; the board replays only the last 200 lines of the current run when it restarts.
 
 ## Repository layout
 
