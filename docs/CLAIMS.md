@@ -2,7 +2,7 @@
 
 GOOSE Watch was built against a written list of claims. Each claim says what "done" means and names the probe that would prove it false. The tests, scripts and docs cite these IDs (`C5`, `A2`, …), so you can trace any check back to the promise it guards.
 
-`[x]` means the claim is closed on the evidence named in its probe. `[ ]` means it is still open.
+`[x]` means the claim is closed on the evidence named in its probe. `[ ]` means it is still open. Missing numbers (C12, C17, C21–C25, C35) belong to the demo video and the release process, which live outside this repository.
 
 ## Principles
 
@@ -48,7 +48,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 
 ## Live sensor and board
 
-- [x] **C10** Live capture works end to end: a scenario replayed on an isolated link raises the same alerts as the offline decode, with the same PDU ages. Probe: `scripts/live-parity.sh`, 14/14 at 4×.
+- [x] **C10** Live capture works end to end: a scenario replayed on an isolated link raises the same alerts as the offline decode, with the same PDU ages. Probe: `scripts/live-parity.sh`, 14/14 at 2× (2026-10-03).
 - [x] **C11** The board shows each alert with the rule that fired, the model's probabilities and one plain sentence, updating live. Probe: browser screenshot.
 - [ ] **C13** A lab run can be watched live from a terminal. Probe: `scripts/watch-lab.sh` opens a tmux session with capture, replay and alert panes.
 - [x] **C14** A Proxmox deployment is reproducible from the repository, on an isolated bridge with no uplink. Probe: `scripts/proxmox-lab.sh`; a fresh container reached C10 (13/13) on 2026-10-02, on an earlier version with 13 scenarios; not re-run since.

@@ -25,8 +25,8 @@ The repository ships one synthetic pcap per attack or fault. The rules need a **
 ```sh
 bun src/cli.ts learn fixtures/baseline.pcap my-baseline.json   # learn what "normal" looks like
 bun src/cli.ts run --file fixtures/replay.pcap --baseline my-baseline.json
+# 2026-10-01T10:00:40.000Z  sev 3  STNUM_REGRESSION   BAY1_CTRL/LLN0$GO$gcbPos  02:1e:d0:00:00:11
 # 1 alerts
-# ...  sev 3  STNUM_REGRESSION   BAY1_CTRL/LLN0$GO$gcbPos  02:1e:d0:00:00:11
 ```
 
 Try the other files in `fixtures/` (`poisoning`, `spoofed-mac`, `ttl-expiry`, …). `bun src/cli.ts scenarios fixtures` regenerates all of them, byte for byte.

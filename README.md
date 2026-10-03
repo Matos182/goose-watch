@@ -51,7 +51,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
 - Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10), and undoing any one hardening guard does too (`bun scripts/mutate-hardening.ts`, 22/22 named guards).
-- Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 4x), with the same PDU timestamp ages (lab replay retimes each frame).
+- Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 2x), with the same PDU timestamp ages (lab replay retimes each frame). Faster replay shortens silences while the 2 s time-allowed-to-live stays real time, so at 4x the simulation-bit loss cannot fire.
 - Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 
   | Model | Pack | Verdict | Not sure | Confident accuracy | Attacks caught | p50 |
