@@ -52,7 +52,14 @@ export function parseGooseTime(v: string | undefined): number | null {
 
 export function parseEkLine(line: string): GooseEvent | null {
   if (!line.startsWith('{"timestamp"')) return null;
-  const l = (JSON.parse(line) as { layers: Record<string, string[]> }).layers;
+  let l: Record<string, string[]>;
+  try {
+    l = (JSON.parse(line) as { layers: Record<string, string[]> }).layers;
+  } catch {
+    console.error(`decode: skipped an unreadable tshark line (${line.length} bytes)`);
+    return null; // one broken line must not end a live capture
+  }
+  if (typeof l !== "object" || l === null) return null;
   const ref = one(l, "goose_gocbRef");
   if (ref === undefined && one(l, "goose_stNum") === undefined) return null; // not a GOOSE PDU at all
   return {
@@ -82,6 +89,9 @@ export function parseEkLine(line: string): GooseEvent | null {
 
 export async function* decode(source: Source): AsyncGenerator<GooseEvent> {
   const proc = Bun.spawn(["tshark", ...tsharkArgs(source)], { stdin: "stdin" in source ? "inherit" : "ignore", stdout: "pipe", stderr: "pipe" });
+  // Read stderr while capturing: on a long live run a full stderr pipe would stall tshark.
+  let errTail = "";
+  const drain = (async () => { for await (const chunk of proc.stderr.pipeThrough(new TextDecoderStream())) errTail = (errTail + chunk).slice(-300); })();
   const reader = proc.stdout.pipeThrough(new TextDecoderStream()).getReader();
   let buf = "";
   for (;;) {
@@ -96,7 +106,8 @@ export async function* decode(source: Source): AsyncGenerator<GooseEvent> {
     }
   }
   const code = await proc.exited;
-  if (code !== 0) throw new Error(`tshark exited ${code}: ${(await new Response(proc.stderr).text()).slice(0, 300)}`);
+  await drain;
+  if (code !== 0) throw new Error(`tshark exited ${code}: ${errTail}`);
 }
 
 export async function decodeAll(file: string): Promise<GooseEvent[]> {

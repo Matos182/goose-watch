@@ -9,6 +9,7 @@ import { generate, SCENARIOS } from "./scenarios";
 import { pcapHeader, pcapRecord, readPcap, retime, writePcap } from "./goose";
 import { RawSocket } from "./rawsock";
 import { updateGate } from "./updates";
+import { frameClock } from "./clock";
 
 const [cmd, ...args] = Bun.argv.slice(2);
 
@@ -65,8 +66,12 @@ switch (cmd) {
       else console.log(`${new Date(a.lastMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  still recurring ×${a.count}`);
     });
     const live = !file;
-    if (live) setInterval(() => engine.tick(Date.now()), 250);
-    for await (const e of decode(file ? { file } : iface ? { iface } : { stdin: true })) engine.ingest(e);
+    const clock = frameClock();
+    if (live) setInterval(() => { const now = clock.now() ?? (iface ? Date.now() : null); if (now !== null) engine.tick(now); }, 250);
+    for await (const e of decode(file ? { file } : iface ? { iface } : { stdin: true })) {
+      engine.ingest(e);
+      clock.saw(e.tMs);
+    }
     if (live) process.exit(0);
     if (!asJson) console.error(`${engine.alerts.length} alerts`);
     break;

@@ -67,7 +67,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 - Any real IED, real substation traffic, or real mirror port.
 - PRP/HSR duplicate handling.
-- Performance at bus scale.
+- Performance at bus scale. Live capture has no kernel capture filter yet (it could not be verified here), so tshark dissects every frame on the mirror port; on a bus that also carries Sampled Values, measure CPU before relying on it.
 - Model behaviour outside these 11 synthetic evidence patterns.
 
 The gold cases share one generator and are not independent field samples. Several alert classes nearly determine the label, so the eval mostly tests the two classes that need judgement: stNum regression and new publisher.
