@@ -11,6 +11,7 @@ export interface AlertUpdate {
   update: { cls: Alert["cls"]; key: string; tMs: number };
   count: number;
   lastMs: number;
+  detail: Alert["detail"]; // current evidence, e.g. the latest offender folded into an overflow alert
 }
 
 export function updateGate(everyMs = UPDATE_EVERY_MS) {
@@ -22,6 +23,6 @@ export function updateGate(everyMs = UPDATE_EVERY_MS) {
     }
     if (a.lastMs - (shown.get(a) ?? a.tMs) < everyMs) return null;
     shown.set(a, a.lastMs);
-    return { update: { cls: a.cls, key: a.key, tMs: a.tMs }, count: a.count, lastMs: a.lastMs };
+    return { update: { cls: a.cls, key: a.key, tMs: a.tMs }, count: a.count, lastMs: a.lastMs, detail: { ...a.detail } };
   };
 }

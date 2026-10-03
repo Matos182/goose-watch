@@ -280,3 +280,40 @@ describe("C32 repeats stay visible downstream", () => {
     expect(out).toEqual(["TEST_MODE", [11, 11_000], [21, 21_000]]);
   });
 });
+
+describe("Review round 4 (gpt-6-astra, final)", () => {
+  test("C26 simulated frames never keep the real publisher alive", () => {
+    const engine = new RuleEngine(baseline);
+    engine.ingest(ev({ tMs: 1_000, sqNum: 1 }));
+    for (let t = 2_000; t <= 9_000; t += 1_000) engine.ingest(ev({ tMs: t, sqNum: t / 1000, simulationBit: true }));
+    expect(engine.alerts.map((a) => a.cls)).toEqual(["SIM_BIT", "TTL_EXPIRY"]);
+  });
+  test("C31 a silence is announced again each minute while it lasts", () => {
+    const engine = new RuleEngine(baseline);
+    engine.ingest(ev({ tMs: 1_000, sqNum: 1 }));
+    for (const t of [3_100, 63_200, 90_000, 123_300]) engine.tick(t);
+    expect(engine.alerts.filter((a) => a.cls === "TTL_EXPIRY").length).toBe(3);
+  });
+  test("a frame to another destination or VLAN, or asking for commissioning, is a configuration change", () => {
+    const b = learn([ev({ dstMac: "01:0c:cd:01:00:01", vlanId: 10 })]);
+    for (const o of [{ dstMac: "01:0c:cd:01:00:02" }, { vlanId: 20 }, { vlanId: null }, { ndsCom: true }] as Partial<GooseEvent>[]) {
+      const engine = new RuleEngine(b);
+      engine.ingest(ev({ tMs: 1_000, sqNum: 1, dstMac: "01:0c:cd:01:00:01", vlanId: 10 }));
+      engine.ingest(ev({ tMs: 2_000, sqNum: 2, dstMac: "01:0c:cd:01:00:01", vlanId: 10, ...o }));
+      expect(engine.alerts.map((a) => a.cls)).toEqual(["CONFIG_CHANGE"]);
+    }
+  });
+  test("C27 a GOOSE frame whose PDU lost every field we read is still reported", () => {
+    const e = parseEkLine(JSON.stringify({ timestamp: "0", layers: { frame_time_epoch: ["1.0"], eth_src: ["02:00:00:00:00:09"], goose_appid: ["0x0001"] } }))!;
+    expect(e).not.toBeNull();
+    expect(invalidFields(e)).toContain("gocbRef");
+  });
+  test("C28 the overflow update carries the latest offender downstream", () => {
+    const gate = updateGate();
+    const out: unknown[] = [];
+    const engine = new RuleEngine(baseline, (a, isNew) => { const o = gate(a, isNew); if (o && o !== "new" && a.key === UNKNOWN_OVERFLOW_KEY) out.push(o.detail.latestGocbRef); });
+    for (let i = 0; i < MAX_UNKNOWN_STREAMS; i++) engine.ingest(ev({ tMs: i, gocbRef: `F${i}` }));
+    for (let t = 1_000; t <= 12_000; t += 1_000) engine.ingest(ev({ tMs: t, gocbRef: `LATE${t}` }));
+    expect(out).toEqual(["LATE11000"]); // the update 10 s after the overflow began names the offender of that moment
+  });
+});

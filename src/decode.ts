@@ -61,7 +61,9 @@ export function parseEkLine(line: string): GooseEvent | null {
   }
   if (typeof l !== "object" || l === null) return null;
   const ref = one(l, "goose_gocbRef");
-  if (ref === undefined && one(l, "goose_stNum") === undefined) return null; // not a GOOSE PDU at all
+  // tshark only passes GOOSE frames (-Y goose). One whose PDU lost every field we read still has its
+  // APPID header: it becomes an event, so MALFORMED_PDU reports it instead of it vanishing.
+  if (ref === undefined && one(l, "goose_stNum") === undefined && one(l, "goose_appid") === undefined) return null;
   return {
     tMs: Math.round(Number(one(l, "frame_time_epoch")) * 1000),
     srcMac: one(l, "eth_src") ?? "",

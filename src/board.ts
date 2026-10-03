@@ -3,7 +3,7 @@
 // reading, and serves a live page on loopback. Rules decide; models only comment.
 // usage: bun src/board.ts [--alerts reports/live/board.jsonl] [--port 8099] [--models nimble:latest,tev1:0.8b@http://127.0.0.1:11436] [--base http://127.0.0.1:11434]
 
-import { existsSync, statSync, openSync, readSync, closeSync, readFileSync } from "node:fs";
+import { existsSync, statSync, openSync, readSync, closeSync } from "node:fs";
 import type { Alert } from "./rules";
 import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
@@ -75,7 +75,8 @@ function onUpdate(u: AlertUpdate) {
   if (!it) return;
   it.alert.count = u.count;
   it.alert.lastMs = u.lastMs;
-  broadcast("update", { id: it.id, count: u.count, lastMs: u.lastMs });
+  const latest = typeof u.detail?.latestGocbRef === "string" ? `${safeText(u.detail.latestGocbRef, 80)} · ${u.detail.latestMac}` : undefined;
+  broadcast("update", { id: it.id, count: u.count, lastMs: u.lastMs, latest });
 }
 
 function handle(l: string, live: boolean) {
@@ -89,12 +90,18 @@ function handle(l: string, live: boolean) {
 
 // On start, show the current run again (everything after the last {"reset":true}, up to the last
 // 200 lines), so a restarted board does not hide a condition that is still open. Then tail the file.
+const REPLAY_BYTES = 1 << 20;
 let offset = 0;
 let partial = "";
 if (existsSync(file)) {
-  const text = readFileSync(file, "utf8");
-  offset = Buffer.byteLength(text);
-  const lines = text.split("\n");
+  // Read at most the last REPLAY_BYTES: a long-running alert file must not be loaded whole.
+  const size = statSync(file).size, from = Math.max(0, size - REPLAY_BYTES);
+  const fd = openSync(file, "r"), buf = Buffer.alloc(size - from);
+  readSync(fd, buf, 0, buf.length, from);
+  closeSync(fd);
+  offset = size;
+  const lines = buf.toString("utf8").split("\n");
+  if (from > 0) lines.shift(); // the first line may be cut in half
   const lastReset = lines.findLastIndex((l) => l.includes('"reset":true'));
   for (const l of lines.slice(lastReset + 1).slice(-200)) handle(l, false);
 }

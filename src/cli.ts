@@ -63,7 +63,7 @@ switch (cmd) {
       if (out === null) return;
       if (asJson) console.log(JSON.stringify(out === "new" ? a : out));
       else if (out === "new") console.log(`${new Date(a.tMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  ${a.srcMac}`);
-      else console.log(`${new Date(a.lastMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  still recurring ×${a.count}`);
+      else console.log(`${new Date(a.lastMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  still recurring ×${a.count}${typeof a.detail.latestGocbRef === "string" ? `, latest ${safeText(a.detail.latestGocbRef)} ${a.detail.latestMac}` : ""}`);
     });
     const live = !file;
     const clock = frameClock();

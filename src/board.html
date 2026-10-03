@@ -45,6 +45,7 @@
   .title { font-size: 18px; font-weight: 650; margin: 2px 0 4px; }
   .plain { color: var(--muted); margin: 0 0 10px; }
   .src { font: 12px var(--mono); color: var(--faint); overflow-wrap: anywhere; }
+  .human { font: 12px var(--mono); color: var(--muted); margin-top: 4px; }
   .src b { color: var(--muted); font-weight: 500; }
   .ai { padding: 14px 18px; background: var(--panel2); display: flex; flex-direction: column; gap: 12px; }
   .ai h3 { margin: 0; font: 600 11px var(--mono); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
@@ -106,6 +107,8 @@ function readingEl(r) {
     : r.notSure ? `not sure · best guess ${CAUSE[r.cause]} ${Math.round(r.p * 100)}%`
     : `${CAUSE[r.cause]} ${Math.round(r.p * 100)}%`;
   row.append(v);
+  // Who looks is decided in code, not by the model: say it on every reading.
+  if (r.human !== undefined) row.append(el("div", "human", r.human ? "a human checks now" : "no action needed now"));
   if (r.dist) {
     const bars = el("div", "bars"), legend = el("div", "legend");
     for (const k of Object.keys(CAUSE)) {
@@ -137,7 +140,11 @@ function addCard(item, models) {
   ai.append(pending);
   card.append(what, ai);
   feed.prepend(card);
-  cards.set(item.id, { slots, pending, showTimes, n: item.readings.length, total: models.length });
+  // Keep the page bounded on a long run: the oldest cards go first.
+  while (feed.children.length > 200) { const old = feed.lastElementChild; for (const [id, c] of cards) if (c.card === old) cards.delete(id); old.remove(); }
+  const latest = el("div", "src", "");
+  what.append(latest);
+  cards.set(item.id, { card, slots, pending, showTimes, latest, n: item.readings.length, total: models.length });
 }
 
 let models = [];
@@ -153,7 +160,11 @@ es.addEventListener("reading", (e) => {
   const { id, reading } = JSON.parse(e.data), c = cards.get(id); if (!c) return;
   c.slots.append(readingEl(reading)); c.n++; if (c.n >= c.total) c.pending.textContent = "";
 });
-es.addEventListener("update", (e) => { const { id, count, lastMs } = JSON.parse(e.data); cards.get(id)?.showTimes(count, lastMs); });
+es.addEventListener("update", (e) => {
+  const { id, count, lastMs, latest } = JSON.parse(e.data), c = cards.get(id); if (!c) return;
+  c.showTimes(count, lastMs);
+  if (latest) c.latest.textContent = "latest: " + latest;
+});
 es.addEventListener("reset", () => { feed.replaceChildren(); const e = el("div", "", "new run · listening to the bus…"); e.id = "empty"; feed.append(e); cards.clear(); });
 const conn = document.getElementById("conn");
 es.onopen = () => { conn.textContent = "live"; conn.classList.remove("down"); };

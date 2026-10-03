@@ -38,6 +38,9 @@ export interface BaselineEntry {
   // The largest time-allowed-to-live seen while learning. TAL is a field in every frame, so an
   // attacker can set it; the rules time silence against this learned value, never a frame's.
   timeAllowedToLive?: number;
+  // Where the publisher sends: a frame for another multicast address or VLAN is a configuration change.
+  dstMac?: string;
+  vlanId?: number | null;
 }
 
 export interface Baseline {
@@ -65,7 +68,7 @@ export function learn(events: Iterable<GooseEvent>): Baseline {
   for (const e of events) {
     const key = streamKey(e);
     const p = m.get(key);
-    if (!p) m.set(key, { key, srcMac: e.srcMac, datSet: e.datSet, confRev: e.confRev, numDatSetEntries: e.numDatSetEntries, timeAllowedToLive: e.timeAllowedToLive });
+    if (!p) m.set(key, { key, srcMac: e.srcMac, datSet: e.datSet, confRev: e.confRev, numDatSetEntries: e.numDatSetEntries, timeAllowedToLive: e.timeAllowedToLive, dstMac: e.dstMac, vlanId: e.vlanId });
     else p.timeAllowedToLive = Math.max(p.timeAllowedToLive ?? 0, e.timeAllowedToLive);
   }
   return { version: 1, publishers: [...m.values()].sort((a, b) => a.key.localeCompare(b.key)) };
@@ -83,6 +86,7 @@ interface StreamState extends Sequence {
   anchorSeen: number; // the last frame that continued the anchor
   talSeen: number; // largest TAL on the anchor's own frames: the fallback when the baseline has none
   expired: boolean;
+  announcedMs?: number; // when the current silence was last announced
   // A lower sequence after a regression. Every sequence rule runs on it from its first frame, so
   // nothing goes unwatched while it is followed. It replaces the anchor only with restart evidence.
   shadow?: Sequence & { frames: number; since: number; restartEvidence: boolean };
@@ -143,7 +147,7 @@ export class RuleEngine {
   private open = new Map<string, Alert>();
   private unknown = new Map<string, number>(); // unknown stream key → last seen
   private startMs?: number; // first time the engine saw the clock
-  private absent = new Set<string>(); // baseline publishers already reported as never seen
+  private absent = new Map<string, number>(); // baseline publishers never seen → last announced
   readonly alerts: Alert[] = [];
 
   constructor(baseline: Baseline, private onAlert: (a: Alert, isNew: boolean) => void = () => {}) {
@@ -183,8 +187,10 @@ export class RuleEngine {
       const known = this.known.get(key);
       if (!known) continue;
       const tal = this.trustedTal(known, s);
-      if (!s.expired && now - s.lastSeen > tal) {
+      if (now - s.lastSeen > tal && (!s.expired || now - s.announcedMs! >= REALERT_MS)) {
+        // A silence is announced when it starts and again each minute while it lasts.
         s.expired = true;
+        s.announcedMs = now;
         const [appHex, ...ref] = key.split("|");
         this.ctx = { publisherInBaseline: true, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - s.lastSeen };
         this.raise("TTL_EXPIRY", { tMs: now, srcMac: known.srcMac, gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
@@ -195,10 +201,12 @@ export class RuleEngine {
     // signal too, once its learned TAL (or ABSENT_DEFAULT_MS without one) and a start-up grace are over.
     this.startMs ??= now;
     for (const [key, known] of this.known) {
-      if (this.state.has(key) || this.absent.has(key)) continue;
+      if (this.state.has(key)) continue;
       const wait = Math.max(known.timeAllowedToLive ?? ABSENT_DEFAULT_MS, START_GRACE_MS);
       if (now - this.startMs <= wait) continue;
-      this.absent.add(key);
+      const announced = this.absent.get(key);
+      if (announced !== undefined && now - announced < REALERT_MS) continue;
+      this.absent.set(key, now);
       const [appHex, ...ref] = key.split("|");
       this.ctx = { publisherInBaseline: true, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - this.startMs };
       this.raise("TTL_EXPIRY", { tMs: now, srcMac: known.srcMac, gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
@@ -243,11 +251,16 @@ export class RuleEngine {
       return; // an invalid header never reaches the stream state
     }
     if (known && known.srcMac === e.srcMac && (known.confRev !== e.confRev || known.datSet !== e.datSet ||
-        known.numDatSetEntries !== e.numDatSetEntries || e.timeAllowedToLive > (known.timeAllowedToLive ?? Infinity))) {
-      this.raise("CONFIG_CHANGE", e, { confRev: e.confRev, expectedConfRev: known.confRev, datSet: e.datSet, timeAllowedToLive: e.timeAllowedToLive });
+        known.numDatSetEntries !== e.numDatSetEntries || e.timeAllowedToLive > (known.timeAllowedToLive ?? Infinity) ||
+        (known.dstMac !== undefined && known.dstMac !== e.dstMac) || (known.vlanId !== undefined && known.vlanId !== e.vlanId) || e.ndsCom)) {
+      this.raise("CONFIG_CHANGE", e, { confRev: e.confRev, expectedConfRev: known.confRev, datSet: e.datSet, timeAllowedToLive: e.timeAllowedToLive,
+        dstMac: e.dstMac, vlanId: e.vlanId ?? "none", ndsCom: e.ndsCom });
     }
     if (e.test) this.raise("TEST_MODE", e, {});
-    if (e.simulationBit) this.raise("SIM_BIT", e, {});
+    if (e.simulationBit) {
+      this.raise("SIM_BIT", e, {});
+      return; // a simulated frame is a test set talking: it never keeps the real publisher's sequence or signal alive
+    }
 
     // Sequence state is tracked only for baseline publishers from their baseline MAC, so a
     // spoofer cannot corrupt the legitimate sequence, and forged publishers (already a
