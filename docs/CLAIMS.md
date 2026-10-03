@@ -26,8 +26,11 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C2** `decode` turns a pcap into one event per GOOSE PDU with no loss. Probe: event count equals tshark count on every fixture; fields match tshark.
 - [x] **C3** Each anomaly class fires on its scenario, and each scenario raises exactly its expected set: new publisher (unknown block or spoofed MAC), stNum regression, stNum jump, sqNum reset, data change without a new stNum, TTL expiry, test flag, Ed2 simulation bit, configuration revision change. Probe: `bun test`.
 - [x] **C4** The clean baseline (≥ 10 simulated minutes, several publishers, normal state changes) and a held-out clean capture raise zero alerts. Probe: `bun test`.
-- [x] **C5** Every rule has a negative control: with the rule removed, its test fails. Probe: `scripts/mutate-rules.sh`, 9/9 killed.
+- [x] **C5** Every rule has a negative control: with the rule removed, its test fails. Probe: `scripts/mutate-rules.sh`, 10/10 killed.
 - [x] **C9** Hostile gocbRef and datSet strings (prompt-injection text, control and bidi characters) don't change rule outcomes and render escaped. Probe: `bun test` with the `hostile-name` scenario.
+- [x] **C26** A relay restart re-arms the rules: a lower sequence after a regression is adopted only after 3 consistent frames and two time-allowed-to-live windows with no frame from the old sequence, so a forged value after a restart is still caught and a replay next to a live publisher is never adopted. Probe: `test/robustness.test.ts`.
+- [x] **C27** A frame with a missing or invalid header field (stNum, sqNum, time-allowed-to-live, confRev, entry count, APPID) raises MALFORMED_PDU and never updates the stream, so it cannot reset detection for the frames after it. Probe: `test/robustness.test.ts`.
+- [x] **C28** A flood of forged publishers stays bounded: at most 256 unknown streams get their own alerts and the rest fold into one, unknown streams keep no sequence state, the alert list is capped at 10 000, and at most 16 model calls wait while the rest read "AI skipped". Probe: `test/robustness.test.ts`.
 
 ## Local triage
 

@@ -9,6 +9,7 @@ import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
 import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
 import { triage2, triage3 } from "./hops";
+import { Backlog } from "./backlog";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
@@ -43,19 +44,19 @@ function reading(model: string, a: Alert, r: TriageResult): Reading {
   return { model, text: v.ai, notSure: v.notSure, cause: r.triage.causeWinner, p: r.triage.causeP, human: v.human, dist: r.triage.cause };
 }
 
-// One model call at a time keeps the GPU predictable during a live demo.
-let queue = Promise.resolve();
+// One model call at a time keeps the GPU predictable during a live demo; the backlog is capped.
+const backlog = new Backlog();
 function onAlert(a: Alert) {
   const item: Item = { id: nextId++, alert: { ...a, gocbRef: safeText(a.gocbRef, 80) }, plain: RULE_TEXT[a.cls], readings: [] };
   items.push(item);
   if (items.length > 200) items = items.slice(-200);
   broadcast("alert", item);
+  const post = (rd: Reading) => { item.readings.push(rd); broadcast("reading", { id: item.id, reading: rd }); };
   for (const [i, ad] of adapters.entries()) {
-    queue = queue.then(async () => {
-      const rd = reading(models[i]!, a, pack === "3" ? await triage3(ad, a) : pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context));
-      item.readings.push(rd);
-      broadcast("reading", { id: item.id, reading: rd });
-    });
+    backlog.run(
+      async () => post(reading(models[i]!, a, pack === "3" ? await triage3(ad, a) : pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context))),
+      () => post({ model: models[i]!, text: "AI skipped (alert backlog): a human checks now", notSure: true }),
+    );
   }
 }
 

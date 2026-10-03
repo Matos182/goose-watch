@@ -16,7 +16,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
                                                          └▶ local model: cause + doubt (advisory only)
 ```
 
-- **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit. The baseline of publishers is learned from a clean capture.
+- **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit, malformed header. The baseline of publishers is learned from a clean capture. A relay restart re-arms the rules once the new sequence has run on its own, and a flood of forged publishers stays bounded in memory, alerts and model calls.
 - **Models** (`src/triage.ts`, `src/hops.ts`): the default pack 3 measures facts in code, asks the model which evidence pattern they match (or the cause, for classes the rule already explains), and maps the pattern to a cause (cyberattack / maintenance / device fault / unclear). Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
 - **Who looks** (`needsHuman()` in `src/triage.ts`): code decides. Severity 2 or 3, an unsure model, or a cyberattack reading means "a human checks now". The model's own needs-a-human answer is kept in reports only.
 - **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`.
@@ -26,7 +26,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 52 tests, tshark as the decoder oracle
+bun install && bun test                    # 62 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -50,7 +50,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 **Measured, on this repository's synthetic traffic only:**
 
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
-- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 9/9).
+- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10).
 - Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 4x), with the same PDU timestamp ages (lab replay retimes each frame).
 - Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 

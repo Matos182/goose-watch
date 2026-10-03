@@ -2,7 +2,7 @@
 # C5 negative controls: disable each rule in a scratch copy; its scenario test must fail.
 set -u
 root=$(cd "$(dirname "$0")/.." && pwd)
-classes="NEW_PUBLISHER CONFIG_CHANGE STNUM_REGRESSION STNUM_JUMP SQNUM_RESET DATA_WITHOUT_STNUM TTL_EXPIRY TEST_MODE SIM_BIT"
+classes="NEW_PUBLISHER CONFIG_CHANGE STNUM_REGRESSION STNUM_JUMP SQNUM_RESET DATA_WITHOUT_STNUM TTL_EXPIRY TEST_MODE SIM_BIT MALFORMED_PDU"
 red=0; total=0
 for c in $classes; do
   total=$((total+1))
