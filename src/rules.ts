@@ -35,6 +35,9 @@ export interface BaselineEntry {
   datSet: string;
   confRev: number;
   numDatSetEntries: number;
+  // The largest time-allowed-to-live seen while learning. TAL is a field in every frame, so an
+  // attacker can set it; the rules time silence against this learned value, never a frame's.
+  timeAllowedToLive?: number;
 }
 
 export interface Baseline {
@@ -61,7 +64,9 @@ export function learn(events: Iterable<GooseEvent>): Baseline {
   const m = new Map<string, BaselineEntry>();
   for (const e of events) {
     const key = streamKey(e);
-    if (!m.has(key)) m.set(key, { key, srcMac: e.srcMac, datSet: e.datSet, confRev: e.confRev, numDatSetEntries: e.numDatSetEntries });
+    const p = m.get(key);
+    if (!p) m.set(key, { key, srcMac: e.srcMac, datSet: e.datSet, confRev: e.confRev, numDatSetEntries: e.numDatSetEntries, timeAllowedToLive: e.timeAllowedToLive });
+    else p.timeAllowedToLive = Math.max(p.timeAllowedToLive ?? 0, e.timeAllowedToLive);
   }
   return { version: 1, publishers: [...m.values()].sort((a, b) => a.key.localeCompare(b.key)) };
 }
@@ -76,26 +81,37 @@ interface Sequence {
 interface StreamState extends Sequence {
   lastSeen: number; // any frame on the stream (for TTL)
   anchorSeen: number; // the last frame that continued the anchor
-  tal: number;
+  talSeen: number; // largest TAL on the anchor's own frames: the fallback when the baseline has none
   expired: boolean;
   // A lower sequence after a regression. Every sequence rule runs on it from its first frame, so
   // nothing goes unwatched while it is followed. It replaces the anchor only with restart evidence.
   shadow?: Sequence & { frames: number; since: number; restartEvidence: boolean };
 }
 
+// A repeat within DEDUPE_MS of the last occurrence folds into the open alert, but an alert never
+// absorbs repeats for longer than REALERT_MS: a condition that keeps going is re-announced once a
+// minute, so a noisy first event cannot hide the ones after it downstream.
 const DEDUPE_MS = 10_000;
+export const REALERT_MS = 60_000;
 // Restart evidence, fixed when the lower sequence starts: the anchor was silent for longer than its
-// time-allowed-to-live (a rebooting relay goes quiet), and the new message's own timestamp is fresh
-// (a replay carries the old one). Without both, the lower sequence is never adopted and its
-// STNUM_REGRESSION keeps recurring: an extra alert, never a silence.
+// trusted time-allowed-to-live (a rebooting relay goes quiet), and the new message's own timestamp
+// is fresh (GOOSE t is the time of the last state change, and a reboot is one; a replay carries the
+// old one). Without both, the lower sequence is never adopted and its STNUM_REGRESSION keeps
+// recurring: an extra alert, never a silence.
 const FRESH_MS = 5_000;
-// With evidence, the lower sequence is adopted after this many frames and two time-allowed-to-live
-// windows with no frame from the anchor: a publisher that is still alive would have shown up.
+const FUTURE_SKEW_MS = 1_000; // a timestamp from the future is fresh only within this much clock skew
+// With evidence, the lower sequence is adopted after this many strictly advancing frames, over at
+// least two trusted TAL windows and RESTART_MIN_MS of wall clock, with no frame from the anchor: a
+// publisher that is still alive would have shown up. Nothing in a frame can shorten this.
 const RESTART_FRAMES = 3;
 const RESTART_TAL_WINDOWS = 2;
-// Bounds for a flood of forged publishers: memory and alerts stay finite whatever arrives.
+const RESTART_MIN_MS = 10_000;
+// Bounds for a flood of forged publishers: memory and alerts stay finite whatever arrives. An
+// unknown stream idle for UNKNOWN_IDLE_MS gives its slot back, so a later rogue still gets its own alert.
 export const MAX_UNKNOWN_STREAMS = 256;
+export const UNKNOWN_IDLE_MS = 60_000;
 export const MAX_ALERTS = 10_000;
+const MAX_OPEN = 1_024;
 export const UNKNOWN_OVERFLOW_KEY = "ffff|*unknown-publisher-overflow*";
 
 const U32 = 0xffff_ffff;
@@ -108,8 +124,10 @@ export function invalidFields(e: GooseEvent): string[] {
   if (!isU32(e.stNum)) bad.push("stNum");
   if (!isU32(e.sqNum)) bad.push("sqNum");
   if (!isU32(e.timeAllowedToLive) || e.timeAllowedToLive === 0) bad.push("timeAllowedToLive");
-  if (!isU32(e.confRev)) bad.push("confRev");
-  if (!isU32(e.numDatSetEntries)) bad.push("numDatSetEntries");
+  // tshark types these two as signed 32-bit, so a large legitimate value can arrive negative; the
+  // rules only compare them for equality, and NaN is what must never pass.
+  if (!Number.isInteger(e.confRev)) bad.push("confRev");
+  if (!Number.isInteger(e.numDatSetEntries)) bad.push("numDatSetEntries");
   if (!Number.isInteger(e.appId) || e.appId < 0 || e.appId > 0xffff) bad.push("appId");
   return bad;
 }
@@ -118,7 +136,7 @@ export class RuleEngine {
   private known: Map<string, BaselineEntry>;
   private state = new Map<string, StreamState>();
   private open = new Map<string, Alert>();
-  private unknown = new Set<string>();
+  private unknown = new Map<string, number>(); // unknown stream key → last seen
   readonly alerts: Alert[] = [];
 
   constructor(baseline: Baseline, private onAlert: (a: Alert, isNew: boolean) => void = () => {}) {
@@ -127,10 +145,11 @@ export class RuleEngine {
 
   private ctx: Omit<AlertContext, "otherAlertsLast60s"> = { publisherInBaseline: false, macMatchesBaseline: false, testFlag: false, simulationBit: false };
 
-  private raise(cls: AlertClass, e: Pick<GooseEvent, "tMs" | "srcMac" | "gocbRef" | "appId">, detail: Alert["detail"], key = streamKey(e)) {
-    const id = `${cls}|${key}`;
+  private raise(cls: AlertClass, e: Pick<GooseEvent, "tMs" | "srcMac" | "gocbRef" | "appId">, detail: Alert["detail"], key = streamKey(e), fold = "") {
+    // `fold` narrows what may fold together: a regression to a different stNum is a new event, never a repeat.
+    const id = fold ? `${cls}|${key}|${fold}` : `${cls}|${key}`;
     const prev = this.open.get(id);
-    if (prev && e.tMs - prev.lastMs < DEDUPE_MS) {
+    if (prev && e.tMs - prev.lastMs < DEDUPE_MS && e.tMs - prev.tMs < REALERT_MS) {
       prev.count += 1;
       prev.lastMs = e.tMs;
       this.onAlert(prev, false);
@@ -140,6 +159,8 @@ export class RuleEngine {
     const context: AlertContext = { ...this.ctx, otherAlertsLast60s: [...new Set(others)] };
     const a: Alert = { cls, severity: RULE_SEVERITY[cls], key, srcMac: e.srcMac, gocbRef: e.gocbRef, tMs: e.tMs, detail, count: 1, lastMs: e.tMs, context };
     this.open.set(id, a);
+    // An open alert that has been quiet for DEDUPE_MS can never fold again, so it is safe to forget.
+    if (this.open.size > MAX_OPEN) for (const [k, o] of this.open) if (e.tMs - o.lastMs >= DEDUPE_MS) this.open.delete(k);
     this.alerts.push(a);
     if (this.alerts.length > MAX_ALERTS) this.alerts.splice(0, this.alerts.length - MAX_ALERTS);
     this.onAlert(a, true);
@@ -149,50 +170,58 @@ export class RuleEngine {
   tick(now: number) {
     for (const [key, s] of this.state) {
       // Silence only matters for publishers we expect: a rogue device going quiet is not a lost signal.
-      if (!s.expired && this.known.has(key) && now - s.lastSeen > s.tal) {
+      const known = this.known.get(key);
+      if (!known) continue;
+      const tal = this.trustedTal(known, s);
+      if (!s.expired && now - s.lastSeen > tal) {
         s.expired = true;
         const [appHex, ...ref] = key.split("|");
-        const known = this.known.get(key);
-        this.ctx = { publisherInBaseline: !!known, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - s.lastSeen };
-        this.raise("TTL_EXPIRY", { tMs: now, srcMac: known?.srcMac ?? "", gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
-          { silentMs: now - s.lastSeen, timeAllowedToLive: s.tal });
+        this.ctx = { publisherInBaseline: true, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - s.lastSeen };
+        this.raise("TTL_EXPIRY", { tMs: now, srcMac: known.srcMac, gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
+          { silentMs: now - s.lastSeen, timeAllowedToLive: tal });
       }
     }
   }
 
   ingest(e: GooseEvent) {
-    const bad = invalidFields(e);
-    if (bad.length) {
-      if (!Number.isFinite(e.tMs)) return; // tshark always stamps frames; nothing to anchor an alert to otherwise
-      this.tick(e.tMs);
-      const known = this.known.get(streamKey(e));
-      this.ctx = { publisherInBaseline: !!known, macMatchesBaseline: known?.srcMac === e.srcMac, testFlag: e.test, simulationBit: e.simulationBit };
-      this.raise("MALFORMED_PDU", e, { fields: bad.join(",") }, known ? streamKey(e) : this.admitUnknown(streamKey(e)));
-      return;
-    }
+    if (!Number.isFinite(e.tMs)) return; // tshark always stamps frames; nothing to anchor an alert to otherwise
     this.tick(e.tMs);
     const key = streamKey(e);
     const known = this.known.get(key);
+    const bad = invalidFields(e);
     const prev = this.state.get(key);
-    this.ctx = {
-      publisherInBaseline: !!known,
-      macMatchesBaseline: known?.srcMac === e.srcMac,
-      testFlag: e.test,
-      simulationBit: e.simulationBit,
-      ...(prev && known?.srcMac === e.srcMac && { stNumDelta: e.stNum - prev.stNum, silenceBeforeMs: e.tMs - prev.lastSeen }),
-      sqNum: e.sqNum,
-      stNum: e.stNum,
-      ...(e.pduTMs !== null && { pduTimestampAgeMs: e.tMs - e.pduTMs }),
-      ...(known && { confRevChanged: known.confRev !== e.confRev }),
-    };
+    this.ctx = bad.length
+      ? { publisherInBaseline: !!known, macMatchesBaseline: known?.srcMac === e.srcMac, testFlag: e.test, simulationBit: e.simulationBit }
+      : {
+          publisherInBaseline: !!known,
+          macMatchesBaseline: known?.srcMac === e.srcMac,
+          testFlag: e.test,
+          simulationBit: e.simulationBit,
+          ...(prev && known?.srcMac === e.srcMac && { stNumDelta: e.stNum - prev.stNum, silenceBeforeMs: e.tMs - prev.lastSeen }),
+          sqNum: e.sqNum,
+          stNum: e.stNum,
+          ...(e.pduTMs !== null && { pduTimestampAgeMs: e.tMs - e.pduTMs }),
+          ...(known && { confRevChanged: known.confRev !== e.confRev }),
+        };
+
+    // Who sent it comes first: a broken header must not hide a forged publisher.
     if (!known) {
-      const alertKey = this.admitUnknown(key);
-      this.raise("NEW_PUBLISHER", e, { expectedMac: "none", datSet: e.datSet }, alertKey);
-      if (alertKey === UNKNOWN_OVERFLOW_KEY) return; // past the bound, every forged stream folds into one alert
+      const alertKey = this.admitUnknown(key, e.tMs);
+      const overflow = alertKey === UNKNOWN_OVERFLOW_KEY;
+      this.raise("NEW_PUBLISHER", e, { expectedMac: "none", datSet: e.datSet,
+        ...(overflow && { unknownStreams: this.unknown.size, latestGocbRef: safeText(e.gocbRef, 80), latestMac: e.srcMac }) }, alertKey);
+      if (bad.length) this.raise("MALFORMED_PDU", e, { fields: bad.join(",") }, alertKey);
+      if (overflow || bad.length) return; // past the bound, every forged stream folds into one alert
     } else if (known.srcMac !== e.srcMac) {
       this.raise("NEW_PUBLISHER", e, { expectedMac: known.srcMac, datSet: e.datSet });
-    } else if (known.confRev !== e.confRev || known.datSet !== e.datSet || known.numDatSetEntries !== e.numDatSetEntries) {
-      this.raise("CONFIG_CHANGE", e, { confRev: e.confRev, expectedConfRev: known.confRev, datSet: e.datSet });
+    }
+    if (bad.length) {
+      this.raise("MALFORMED_PDU", e, { fields: bad.join(",") });
+      return; // an invalid header never reaches the stream state
+    }
+    if (known && known.srcMac === e.srcMac && (known.confRev !== e.confRev || known.datSet !== e.datSet ||
+        known.numDatSetEntries !== e.numDatSetEntries || e.timeAllowedToLive > (known.timeAllowedToLive ?? Infinity))) {
+      this.raise("CONFIG_CHANGE", e, { confRev: e.confRev, expectedConfRev: known.confRev, datSet: e.datSet, timeAllowedToLive: e.timeAllowedToLive });
     }
     if (e.test) this.raise("TEST_MODE", e, {});
     if (e.simulationBit) this.raise("SIM_BIT", e, {});
@@ -204,34 +233,36 @@ export class RuleEngine {
     const values = e.values.join(",");
     const s = this.state.get(key);
     if (!s) {
-      this.state.set(key, { stNum: e.stNum, sqNum: e.sqNum, values, lastSeen: e.tMs, anchorSeen: e.tMs, tal: e.timeAllowedToLive, expired: false });
+      this.state.set(key, { stNum: e.stNum, sqNum: e.sqNum, values, lastSeen: e.tMs, anchorSeen: e.tMs, talSeen: e.timeAllowedToLive, expired: false });
       return;
     }
     s.lastSeen = e.tMs;
-    s.tal = e.timeAllowedToLive;
     s.expired = false;
+    const tal = this.trustedTal(known, s);
 
     if (e.stNum >= s.stNum) {
       // The anchor continues, so it is alive and anything lower was a replay. If a never-adopted
       // shadow climbs back to here, its frames meet the anchor's rules: extra alerts, never silence.
       s.shadow = undefined;
       s.anchorSeen = e.tMs;
+      s.talSeen = Math.max(s.talSeen, e.timeAllowedToLive);
       this.step(s, e, values);
       return;
     }
 
     // Never let a lower sequence rewind the anchor: follow it as a shadow instead.
-    this.raise("STNUM_REGRESSION", e, { stNum: e.stNum, lastStNum: s.stNum });
+    this.raise("STNUM_REGRESSION", e, { stNum: e.stNum, lastStNum: s.stNum }, key, String(e.stNum));
     const sh = s.shadow;
     if (!sh || e.stNum < sh.stNum) {
       const age = e.pduTMs === null ? null : e.tMs - e.pduTMs;
-      const restartEvidence = e.tMs - s.anchorSeen > s.tal && age !== null && Math.abs(age) <= FRESH_MS;
+      const restartEvidence = e.tMs - s.anchorSeen > tal && age !== null && age >= -FUTURE_SKEW_MS && age <= FRESH_MS;
       s.shadow = { stNum: e.stNum, sqNum: e.sqNum, values, frames: 1, since: e.tMs, restartEvidence };
       return;
     }
-    if (!this.step(sh, e, values)) return;
+    const advances = e.stNum > sh.stNum || e.sqNum > sh.sqNum; // a duplicate frame confirms nothing
+    if (!this.step(sh, e, values) || !advances) return;
     sh.frames += 1;
-    if (sh.restartEvidence && sh.frames >= RESTART_FRAMES && e.tMs - sh.since >= RESTART_TAL_WINDOWS * e.timeAllowedToLive) {
+    if (sh.restartEvidence && sh.frames >= RESTART_FRAMES && e.tMs - sh.since >= Math.max(RESTART_TAL_WINDOWS * tal, RESTART_MIN_MS)) {
       s.stNum = sh.stNum;
       s.sqNum = sh.sqNum;
       s.values = sh.values;
@@ -260,17 +291,35 @@ export class RuleEngine {
     return true;
   }
 
-  /** Key for an unknown stream's alerts: its own while under the bound, one shared key past it. */
-  private admitUnknown(key: string): string {
-    if (this.unknown.has(key)) return key;
-    if (this.unknown.size >= MAX_UNKNOWN_STREAMS) return UNKNOWN_OVERFLOW_KEY;
-    this.unknown.add(key);
+  /** The TAL that silence is timed against: the learned one, or the anchor's own largest. Never one frame's. */
+  private trustedTal(known: BaselineEntry, s: StreamState): number {
+    return known.timeAllowedToLive ?? s.talSeen;
+  }
+
+  /**
+   * Key for an unknown stream's alerts: its own while under the bound, one shared key past it.
+   * When full, the oldest stream idle for UNKNOWN_IDLE_MS gives its slot (and its open alerts) back.
+   */
+  private admitUnknown(key: string, now: number): string {
+    if (this.unknown.has(key)) {
+      this.unknown.set(key, now);
+      return key;
+    }
+    if (this.unknown.size >= MAX_UNKNOWN_STREAMS) {
+      const idle = [...this.unknown].find(([, seen]) => now - seen > UNKNOWN_IDLE_MS);
+      if (!idle) return UNKNOWN_OVERFLOW_KEY;
+      this.unknown.delete(idle[0]);
+      for (const cls of Object.keys(RULE_SEVERITY)) this.open.delete(`${cls}|${idle[0]}`);
+    }
+    this.unknown.set(key, now);
     return key;
   }
 }
 
-// Strip what could act on a terminal or flip text direction before display.
+// Strip what could act on a terminal, flip text direction or hide text from a reader before display:
+// ASCII and Latin-1 control characters, soft hyphen, Arabic letter mark, zero-width and bidi controls, line/paragraph
+// separators, invisible operators, BOM and Unicode tag characters (invisible to people, read by models).
 export function safeText(s: string, max = 120): string {
-  const cleaned = s.replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g, "�");
+  const cleaned = s.replace(/[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff\u{e0000}-\u{e007f}]/gu, "\ufffd");
   return cleaned.length > max ? cleaned.slice(0, max - 1) + "…" : cleaned;
 }

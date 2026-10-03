@@ -54,7 +54,13 @@ function onAlert(a: Alert) {
   const post = (rd: Reading) => { item.readings.push(rd); broadcast("reading", { id: item.id, reading: rd }); };
   for (const [i, ad] of adapters.entries()) {
     backlog.run(
-      async () => post(reading(models[i]!, a, pack === "3" ? await triage3(ad, a) : pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context))),
+      async () => {
+        try {
+          post(reading(models[i]!, a, pack === "3" ? await triage3(ad, a) : pack === "2" ? await triage2(ad, a) : await ad.triage(a, a.context)));
+        } catch (e) {
+          post({ model: models[i]!, text: `AI error (${(e as Error).name}): a human checks now`, notSure: true });
+        }
+      },
       () => post({ model: models[i]!, text: "AI skipped (alert backlog): a human checks now", notSure: true }),
     );
   }
@@ -78,16 +84,21 @@ setInterval(() => {
   partial = lines.pop()!;
   for (const l of lines) {
     if (!l.trim()) continue;
-    const o = JSON.parse(l);
+    let o: any;
+    try { o = JSON.parse(l); } catch { console.error(`board: skipped a malformed alert line (${l.length} bytes)`); continue; }
     if (o.reset) { items = []; broadcast("reset", {}); continue; }
     onAlert(o as Alert);
   }
 }, 200);
 
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+
 Bun.serve({
   port,
   hostname: "127.0.0.1",
   fetch(req) {
+    // Loopback alone does not stop a DNS-rebinding page in the browser: answer only our own host name.
+    if (!ALLOWED_HOSTS.has(req.headers.get("host") ?? "")) return new Response("forbidden", { status: 403 });
     const url = new URL(req.url);
     if (url.pathname === "/events") {
       let ctl: ReadableStreamDefaultController;

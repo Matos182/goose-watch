@@ -15,7 +15,7 @@ You need Linux or WSL2. Nothing here touches a real network until step 4, and ev
 ```sh
 git clone https://github.com/Matos182/goose-watch && cd goose-watch
 bun install
-bun test            # 66 tests; every scenario is decoded by tshark and checked against the rules
+bun test            # 76 tests; every scenario is decoded by tshark and checked against the rules
 ```
 
 ## 1 · Offline: rules on a capture file

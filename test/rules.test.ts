@@ -62,6 +62,13 @@ describe("C9 hostile strings", () => {
     const out = safeText(HOSTILE_REF, 500);
     expect(out).not.toMatch(/[\u0000-\u001f\u007f‮]/);
   });
+  test("safeText neutralises invisible characters a model would still read", () => {
+    // soft hyphen, Arabic letter mark, line/paragraph separators, word joiner, Unicode tag characters
+    const hidden = ["\u00ad", "\u061c", "\u2028", "\u2029", "\u2060", "\u{e0041}", "\u{e007f}"];
+    const out = safeText(`A${hidden.join("B")}C`, 500);
+    for (const h of hidden) expect(out.includes(h)).toBe(false);
+    expect(out.startsWith("A") && out.endsWith("C")).toBe(true);
+  });
 });
 
 describe("dedupe", () => {

@@ -70,6 +70,6 @@ Pack 2 plus one change: classes without a pattern hop get the measured facts tog
 | tev1 4B (CPU) | 2 | PASS | 0.31 | 1.00 | 0.60 | 6.3 s |
 | tev1 4B (CPU) | 3 | PASS | 0.26 | 1.00 | 0.73 | 1.6 s |
 
-Pack 3 is best on both models. When the models are confident they are never wrong (tev1 on every pack, nimble from pack 2 on); what is left is cyberattacks they mark "not sure", which go to a human.
+Pack 3 is best on both models. When the models are confident, they made no error on this gold set (tev1 on every pack, nimble from pack 2 on). With 9 to 36 confident cases per run, all from one generator, the 95% Wilson lower bound on that 100% is 0.70 to 0.90, so it is not a promise about real traffic; what is left is cyberattacks they mark "not sure", which go to a human.
 
 **Memory:** two resident models (one on the GPU, one on the CPU) can exhaust a 16 GB WSL2 memory limit. Stop the model servers after an eval, or set a short `OLLAMA_KEEP_ALIVE`.

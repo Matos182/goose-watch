@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { labNamespaceProblem, RawSocket } from "../src/rawsock";
+import { labLinkProblem, labNamespaceProblem, RawSocket } from "../src/rawsock";
 
 describe("A2 lab frames never reach a real network", () => {
   test("refuses interfaces not named gw*", () => {
@@ -18,5 +18,12 @@ describe("A2 lab frames never reach a real network", () => {
 describe("A2 interface listing", () => {
   test("non-interface files in /sys/class/net are ignored, real ones still refused", () => {
     expect(labNamespaceProblem(["lo", "gw0"])).toBeNull();
+  });
+});
+
+describe("A2 only a veth is a lab link", () => {
+  test("a gw* name on a macvlan, VLAN, bridge or renamed physical NIC is refused", () => {
+    expect(labLinkProblem("gwa", "veth")).toBeNull();
+    for (const kind of ["macvlan", "ipvlan", "vlan", "bridge", "macvtap", null]) expect(labLinkProblem("gw0", kind)).toMatch(/not a veth/);
   });
 });

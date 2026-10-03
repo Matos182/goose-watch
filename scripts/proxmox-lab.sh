@@ -13,6 +13,9 @@ pvesh get /nodes/$node/network/vmbr9 >/dev/null 2>&1 || {
   pvesh create /nodes/$node/network --iface vmbr9 --type bridge --autostart 1 --comments "GOOSE Watch isolated lab bridge - no uplink"
   pvesh set /nodes/$node/network
 }
+# An existing vmbr9 is reused only if it has no port: lab GOOSE must have no way onto a real network.
+ports=$(pvesh get /nodes/$node/network/vmbr9 --output-format json | grep -o '"bridge_ports":"[^"]*"' | cut -d'"' -f4 || true)
+case "$ports" in ""|none) ;; *) echo "refusing: vmbr9 has bridge ports ($ports); the lab bridge must have no uplink" >&2; exit 1 ;; esac
 pveam list local | grep -q debian-13-standard_13.6-1 || pveam download local debian-13-standard_13.6-1_amd64.tar.zst
 pct status 120 >/dev/null 2>&1 || pct create 120 $T --hostname goose-sensor --unprivileged 1 --features nesting=1 --cores 2 --memory 2048 --swap 512 \
   --rootfs local-lvm:8 --net0 name=eth0,bridge=vmbr0,ip=dhcp,firewall=1 --net1 name=gw0,bridge=vmbr9 --onboot 0

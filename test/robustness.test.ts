@@ -24,9 +24,9 @@ describe("C26 a relay restart re-arms the rules", () => {
     const { classes } = run([...heartbeat(5, 0, 3), ...heartbeat(1, 0, 20), { stNum: 1, sqNum: 30, values: ["False"] }]);
     expect(classes).toEqual(["STNUM_REGRESSION", "DATA_WITHOUT_STNUM"]);
   });
-  test("after a restart, a normal state change raises nothing new", () => {
+  test("after a restart, a state change on the followed sequence surfaces as its own regression and nothing else", () => {
     const { classes } = run([...heartbeat(5, 0, 3), ...heartbeat(1, 0, 10), ...heartbeat(2, 0, 3, ["False"])]);
-    expect(classes).toEqual(["STNUM_REGRESSION"]);
+    expect(classes).toEqual(["STNUM_REGRESSION", "STNUM_REGRESSION"]);
   });
   test("a forged value inside the restart window is caught too", () => {
     const { classes } = run([...heartbeat(5, 0, 3), ...heartbeat(1, 0, 2), { stNum: 1, sqNum: 2, values: ["False"] }]);
@@ -57,13 +57,13 @@ describe("C26 the lower sequence is adopted only with restart evidence", () => {
     }
     return { engine, regression: () => engine.alerts.find((a) => a.cls === "STNUM_REGRESSION")!.count };
   }
-  test("a reboot (silence, fresh timestamp) is adopted after two TAL windows and stops recurring", () => {
-    const { engine, regression } = afterSilence(0, 5);
+  test("a reboot (silence, fresh timestamp) is adopted after 10 s and stops recurring", () => {
+    const { engine, regression } = afterSilence(0, 11);
     expect(engine.alerts.map((a) => [a.cls, a.severity])).toEqual([["TTL_EXPIRY", 3], ["STNUM_REGRESSION", 3]]);
-    expect(regression()).toBe(5);
-    for (let i = 5; i < 20; i++) engine.ingest(ev({ tMs: 10_000 + i * 1000, pduTMs: 10_000, stNum: 1, sqNum: i }));
-    expect(regression()).toBe(5); // adopted: the stream is normal again
-    engine.ingest(ev({ tMs: 31_000, pduTMs: 10_000, stNum: 1, sqNum: 21, values: ["False"] }));
+    expect(regression()).toBe(11);
+    for (let i = 11; i < 30; i++) engine.ingest(ev({ tMs: 10_000 + i * 1000, pduTMs: 10_000, stNum: 1, sqNum: i }));
+    expect(regression()).toBe(11); // adopted after 10 s: the stream is normal again
+    engine.ingest(ev({ tMs: 41_000, pduTMs: 10_000, stNum: 1, sqNum: 31, values: ["False"] }));
     expect(engine.alerts.at(-1)!.cls).toBe("DATA_WITHOUT_STNUM"); // and fully armed
   });
   test("a replay after silence carries an old timestamp and is never adopted", () => {
@@ -77,7 +77,7 @@ describe("C26 the lower sequence is adopted only with restart evidence", () => {
   });
   test("a jump inside the followed sequence is caught", () => {
     const { classes } = run([...heartbeat(5, 0, 3), ...heartbeat(1, 0, 2), { stNum: 3, sqNum: 0 }]);
-    expect(classes).toEqual(["STNUM_REGRESSION", "STNUM_JUMP"]);
+    expect(classes).toEqual(["STNUM_REGRESSION", "STNUM_REGRESSION", "STNUM_JUMP"]);
   });
 });
 
@@ -97,19 +97,100 @@ describe("C27 a malformed frame never resets a stream", () => {
   });
 });
 
+describe("C26 frame fields cannot buy an adoption", () => {
+  test("forged TAL, fresh t and duplicate frames next to a live publisher are never adopted", () => {
+    // The bypass found in review: the live publisher heartbeats at stNum 10; the attacker clones its
+    // MAC and sends three identical stNum 9 frames with TAL 1 ms and a fresh t, then the live
+    // stNum 10 heartbeat arrives. It must still read as the live anchor, with the replay alarmed.
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 3; i++) engine.ingest(ev({ tMs: i * 1000, stNum: 10, sqNum: i }));
+    for (const tMs of [3_100, 3_101, 3_102]) engine.ingest(ev({ tMs, pduTMs: tMs, stNum: 9, sqNum: 0, timeAllowedToLive: 1 }));
+    engine.ingest(ev({ tMs: 4_000, stNum: 10, sqNum: 4 }));
+    engine.ingest(ev({ tMs: 5_000, stNum: 11, sqNum: 0, values: ["False"] }));
+    expect(engine.alerts.map((a) => a.cls)).toEqual(["STNUM_REGRESSION"]);
+  });
+  test("a frame cannot stretch the silence a TTL is timed against", () => {
+    const engine = new RuleEngine(baseline);
+    engine.ingest(ev({ tMs: 1_000 }));
+    engine.ingest(ev({ tMs: 2_000, sqNum: 4, timeAllowedToLive: 0xffff_ffff }));
+    engine.tick(10_000);
+    expect(engine.alerts.map((a) => a.cls)).toEqual(["CONFIG_CHANGE", "TTL_EXPIRY"]);
+  });
+
+  // A lower sequence after 6 s of silence. `frames` are [ms after 10 s, PDU timestamp age, stNum,
+  // sqNum]; the anchor (stNum 5) may speak in between. Returns whether the lower sequence was adopted:
+  // a probe at stNum 5 is normal for the old anchor and a jump for an adopted stNum-1 sequence.
+  function adopted(frames: [number, number, number, number][], anchorAt: number[] = []) {
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 3; i++) engine.ingest(ev({ tMs: i * 1000, stNum: 5, sqNum: i }));
+    const all = [...frames.map(([dt, age, stNum, sqNum]) => ({ tMs: 10_000 + dt, pduTMs: 10_000 + dt - age, stNum, sqNum })),
+      ...anchorAt.map((dt, i) => ({ tMs: 10_000 + dt, pduTMs: 0, stNum: 5, sqNum: 10 + i }))].sort((a, b) => a.tMs - b.tMs);
+    for (const f of all) engine.ingest(ev(f));
+    engine.ingest(ev({ tMs: 59_000, stNum: 5, sqNum: 50 }));
+    return engine.alerts.at(-1)!.cls === "STNUM_JUMP";
+  }
+  const steady = (n: number, gapMs: number, age = 0): [number, number, number, number][] =>
+    Array.from({ length: n }, (_, i) => [i * gapMs, age, 1, i]);
+
+  test("adoption needs three advancing frames, not just time", () => {
+    expect(adopted(steady(2, 12_000))).toBe(false); // two frames over 12 s
+    expect(adopted(steady(3, 6_000))).toBe(true); // three frames over 12 s
+    expect(adopted(steady(3, 4_000))).toBe(false); // three frames over 8 s: under the 10 s floor
+  });
+  test("a timestamp from the future beyond 1 s of skew is not fresh", () => {
+    expect(adopted(steady(12, 1_000, -2_000))).toBe(false);
+    expect(adopted(steady(12, 1_000, -500))).toBe(true);
+    expect(adopted(steady(12, 1_000, 6_000))).toBe(false); // and one older than 5 s is a replay
+  });
+  test("one frame from the old sequence cancels a restart in progress", () => {
+    expect(adopted(steady(12, 1_000))).toBe(true);
+    expect(adopted(steady(12, 1_000), [3_500])).toBe(false);
+  });
+  test("a regression to a different stNum is a new alert, not a fold", () => {
+    // A stale replay every 9 s keeps one alert open; a forged stNum 4 later must surface on its own.
+    const engine = new RuleEngine(baseline);
+    for (let t = 1_000; t <= 120_000; t += 1_000) engine.ingest(ev({ tMs: t, stNum: 10, sqNum: t / 1000 }));
+    for (let t = 3_200; t < 100_000; t += 9_000) engine.ingest(ev({ tMs: t, pduTMs: 0, stNum: 1, sqNum: 0 }));
+    engine.ingest(ev({ tMs: 103_100, pduTMs: 103_100, stNum: 4, sqNum: 0, values: ["False"] }));
+    const regressions = engine.alerts.filter((a) => a.cls === "STNUM_REGRESSION");
+    expect(regressions.at(-1)!.detail.stNum).toBe(4);
+    expect(regressions.at(-1)!.count).toBe(1);
+  });
+});
+
 describe("C28 a flood of forged publishers stays bounded", () => {
+  // A dense flood: one frame per millisecond, faster than any unknown stream can go idle.
+  const flood = (n: number, f: (i: number) => Partial<GooseEvent>, engine = new RuleEngine(baseline)) => {
+    for (let i = 0; i < n; i++) engine.ingest(ev({ tMs: i, ...f(i) }));
+    return engine;
+  };
   test("unknown streams past the bound fold into one alert and keep no state", () => {
-    const n = 5_000;
-    const { engine } = run(Array.from({ length: n }, (_, i) => ({ gocbRef: `X${i}`, test: true })));
+    const engine = flood(5_000, (i) => ({ gocbRef: `X${i}`, test: true }));
     const overflow = engine.alerts.filter((a) => a.key === UNKNOWN_OVERFLOW_KEY);
-    expect(overflow.length).toBe(1);
-    expect(overflow[0]!.cls).toBe("NEW_PUBLISHER");
+    expect(overflow.map((a) => a.cls)).toEqual(["NEW_PUBLISHER"]);
     expect(engine.alerts.length).toBe(2 * MAX_UNKNOWN_STREAMS + 1); // NEW_PUBLISHER + TEST_MODE per admitted stream
     expect((engine as unknown as { state: Map<string, unknown> }).state.size).toBe(0);
   });
-  test("malformed frames from unknown streams share the same bound", () => {
-    const { engine } = run(Array.from({ length: 2_000 }, (_, i) => ({ gocbRef: `M${i}`, stNum: NaN })));
-    expect(engine.alerts.length).toBe(MAX_UNKNOWN_STREAMS + 1);
+  test("a malformed frame from an unknown stream is still a new publisher, within the same bound", () => {
+    const engine = flood(2_000, (i) => ({ gocbRef: `M${i}`, stNum: NaN }));
+    expect(engine.alerts.slice(0, 2).map((a) => [a.cls, a.severity])).toEqual([["NEW_PUBLISHER", 3], ["MALFORMED_PDU", 2]]);
+    expect(engine.alerts.length).toBe(2 * MAX_UNKNOWN_STREAMS + 2);
+  });
+  test("a rogue that arrives after the flood goes idle gets its own alert", () => {
+    // The scenario from review: 256 junk streams once, then a new junk stream every 5 s; a real rogue at 70 s.
+    const engine = flood(MAX_UNKNOWN_STREAMS, (i) => ({ gocbRef: `J${i}` }));
+    for (let t = 5_000; t < 70_000; t += 5_000) engine.ingest(ev({ tMs: t, gocbRef: `late-junk-${t}` }));
+    engine.ingest(ev({ tMs: 70_000, srcMac: "02:66:66:00:00:01", gocbRef: "ROGUE/LLN0$GO$trip" }));
+    const rogue = engine.alerts.at(-1)!;
+    expect([rogue.gocbRef, rogue.key === UNKNOWN_OVERFLOW_KEY]).toEqual(["ROGUE/LLN0$GO$trip", false]);
+  });
+  test("an overflow that keeps going is re-announced each minute, naming the latest offender", () => {
+    const engine = flood(MAX_UNKNOWN_STREAMS + 1, (i) => ({ gocbRef: `K${i}` }));
+    for (const t of [30_000, 60_000]) for (let k = 0; k < MAX_UNKNOWN_STREAMS; k++) engine.ingest(ev({ tMs: t + k, gocbRef: `K${k}` })); // keep every slot busy
+    engine.ingest(ev({ tMs: 61_500, srcMac: "02:66:66:00:00:01", gocbRef: "ROGUE/LLN0$GO$trip" }));
+    const overflow = engine.alerts.filter((a) => a.key === UNKNOWN_OVERFLOW_KEY);
+    expect(overflow.length).toBe(2);
+    expect(overflow[1]!.detail.latestGocbRef).toBe("ROGUE/LLN0$GO$trip");
   });
   test("the alert list is capped", () => {
     // One TEST_MODE alert every 11 s (past the dedupe window) on a known stream.

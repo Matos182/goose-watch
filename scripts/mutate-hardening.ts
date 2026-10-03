@@ -1,0 +1,42 @@
+#!/usr/bin/env bun
+// C29 negative controls for the hardening in src/rules.ts (C26-C28): each mutant undoes one
+// defence, and the test suite must fail for every one. mutate-rules.sh covers whole rules; this
+// covers the guards inside them. usage: bun scripts/mutate-hardening.ts
+import { $ } from "bun";
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const root = join(import.meta.dir, "..");
+const src = readFileSync(join(root, "src/rules.ts"), "utf8");
+const muts: [string, string, string][] = [
+  ["RESTART_FRAMES 3→1", "const RESTART_FRAMES = 3;", "const RESTART_FRAMES = 1;"],
+  ["RESTART_MIN_MS 10s→0", "const RESTART_MIN_MS = 10_000;", "const RESTART_MIN_MS = 0;"],
+  ["future skew unchecked", " && age >= -FUTURE_SKEW_MS && age <= FRESH_MS;", " && age <= FRESH_MS;"],
+  ["stale age unchecked", " && age >= -FUTURE_SKEW_MS && age <= FRESH_MS;", " && age >= -FUTURE_SKEW_MS;"],
+  ["silence not required", "const restartEvidence = e.tMs - s.anchorSeen > tal && ", "const restartEvidence = "],
+  ["anchor frame keeps shadow", "      s.shadow = undefined;\n      s.anchorSeen = e.tMs;\n      s.talSeen", "      s.anchorSeen = e.tMs;\n      s.talSeen"],
+  ["lower never replaces shadow", "if (!sh || e.stNum < sh.stNum) {", "if (!sh) {"],
+  ["duplicates count", "const advances = e.stNum > sh.stNum || e.sqNum > sh.sqNum;", "const advances = true;"],
+  ["TAL from frame history only", "return known.timeAllowedToLive ?? s.talSeen;", "return s.talSeen;"],
+  ["TAL above baseline not alerted", " || e.timeAllowedToLive > (known.timeAllowedToLive ?? Infinity)", ""],
+  ["regression folds across stNum", ", key, String(e.stNum));", ", key);"],
+  ["no re-alert", " && e.tMs - prev.tMs < REALERT_MS", ""],
+  ["unknown never evicted", "      if (!idle) return UNKNOWN_OVERFLOW_KEY;", "      return UNKNOWN_OVERFLOW_KEY;"],
+  ["identity skipped on malformed", "      if (bad.length) this.raise(\"MALFORMED_PDU\", e, { fields: bad.join(\",\") }, alertKey);\n      if (overflow || bad.length) return;", "      if (overflow) return;"],
+];
+
+let survived = 0;
+for (const [name, from, to] of muts) {
+  if (!src.includes(from)) throw new Error(`mutant "${name}" no longer matches src/rules.ts: update this list`);
+  const work = mkdtempSync(join(tmpdir(), "goose-mut-"));
+  for (const d of ["src", "test", "fixtures", "package.json", "tsconfig.json"]) cpSync(join(root, d), join(work, d), { recursive: true });
+  symlinkSync(join(root, "node_modules"), join(work, "node_modules"));
+  writeFileSync(join(work, "src/rules.ts"), src.replace(from, to));
+  const r = await $`bun test`.cwd(work).quiet().nothrow();
+  rmSync(work, { recursive: true, force: true });
+  if (r.exitCode === 0) survived++;
+  console.log(`${r.exitCode === 0 ? "SURVIVED" : "killed  "}  ${name}`);
+}
+console.log(`hardening controls: ${muts.length - survived}/${muts.length} killed`);
+process.exit(survived ? 1 : 0);

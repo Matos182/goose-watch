@@ -13,7 +13,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 ## Anti-claims: what must never happen
 
 - [x] **A1** No real utility capture, IP, hostname, MAC or SCD file appears in the repository or in any hosted API call. All traffic is synthetic. Probe: a scan of the full git history for private identifiers, and an inventory of every IP and MAC ever committed (all synthetic).
-- [x] **A2** No GOOSE frame is ever emitted onto a production network. Probe: the raw-socket sender refuses any interface not named `gw*` and any namespace that contains a real interface (`test/rawsock.test.ts`).
+- [x] **A2** No GOOSE frame is ever emitted onto a production network by these tools. Probe: the raw-socket sender refuses any interface that is not a veth named `gw*` and any namespace that contains another interface (`test/rawsock.test.ts`; a macvlan named `gw*` refused live), and `scripts/proxmox-lab.sh` refuses a `vmbr9` with a bridge port. Outside the guard's view: where the far end of a veth is plugged in.
 - [x] **A3** Model output alone never raises, lowers or clears an alert. Probe: same as C16.
 - [x] **A4** No capture reaches a hosted model: the model adapter accepts only a loopback endpoint. Probe: `test/triage.test.ts` (a LAN or remote endpoint is refused).
 
@@ -28,9 +28,10 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C4** The clean baseline (≥ 10 simulated minutes, several publishers, normal state changes) and a held-out clean capture raise zero alerts. Probe: `bun test`.
 - [x] **C5** Every rule has a negative control: with the rule removed, its test fails. Probe: `scripts/mutate-rules.sh`, 10/10 killed.
 - [x] **C9** Hostile gocbRef and datSet strings (prompt-injection text, control and bidi characters) don't change rule outcomes and render escaped. Probe: `bun test` with the `hostile-name` scenario.
-- [x] **C26** A lower sequence after a stNum regression never rewinds the stream and never goes unwatched: every sequence rule runs on it from its first frame. It replaces the old sequence only with restart evidence (the old sequence was silent for longer than its time-allowed-to-live, and the new message timestamp is fresh) after 3 frames and two time-allowed-to-live windows with no frame from the old sequence. A replay with an old timestamp, or one next to a live publisher, keeps its STNUM_REGRESSION alarm live. Probe: `test/robustness.test.ts`.
+- [x] **C26** A lower sequence after a stNum regression never rewinds the stream and never goes unwatched: every sequence rule runs on it from its first frame. It replaces the old sequence only with restart evidence: the old sequence was silent for longer than its learned time-allowed-to-live, and the new message timestamp is between 1 s ahead and 5 s behind the sensor clock. It then needs 3 strictly advancing frames and at least 10 s with no frame from the old sequence. TAL, timestamps and duplicates in a frame cannot shorten any of this. Probe: `test/robustness.test.ts`, including the TAL-1 ms bypass found in review.
 - [x] **C27** A frame with a missing or invalid header field (stNum, sqNum, time-allowed-to-live, confRev, entry count, APPID) raises MALFORMED_PDU and never updates the stream, so it cannot reset detection for the frames after it. Probe: `test/robustness.test.ts`.
-- [x] **C28** A flood of forged publishers stays bounded: at most 256 unknown streams get their own alerts and the rest fold into one, unknown streams keep no sequence state, the alert list is capped at 10 000, and at most 16 model calls wait while the rest read "AI skipped". Probe: `test/robustness.test.ts`.
+- [x] **C28** Alerts stay visible and bounded under a flood: at most 256 unknown streams hold their own alerts, an idle one gives its slot back after 60 s, the rest fold into one overflow alert that names the latest offender; a repeat folds into its open alert for at most 60 s and a regression to a different stNum is always a new alert; unknown streams keep no sequence state, the alert list is capped at 10 000, and at most 16 model calls wait while the rest read "AI skipped". Probe: `test/robustness.test.ts`.
+- [x] **C29** Every hardening guard behind C26-C28 has a negative control: undo it and the suite fails. Probe: `bun scripts/mutate-hardening.ts`, 14/14 killed.
 
 ## Local triage
 

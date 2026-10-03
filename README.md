@@ -16,7 +16,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
                                                          └▶ local model: cause + doubt (advisory only)
 ```
 
-- **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit, malformed header. The baseline of publishers is learned from a clean capture. A relay restart re-arms the rules once the new sequence has run on its own, and a flood of forged publishers stays bounded in memory, alerts and model calls.
+- **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit, malformed header. The baseline of publishers, and the largest time-allowed-to-live each one uses, is learned from a clean capture; silence is timed against that learned value, never a frame's own. After a regression the lower sequence is watched with every rule and replaces the old one only with restart evidence. A repeat folds into its open alert for at most a minute, a regression to a different stNum is always a new alert, and a flood of forged publishers stays bounded in memory, alerts and model calls.
 - **Models** (`src/triage.ts`, `src/hops.ts`): the default pack 3 measures facts in code, asks the model which evidence pattern they match (or the cause, for classes the rule already explains), and maps the pattern to a cause (cyberattack / maintenance / device fault / unclear). Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
 - **Who looks** (`needsHuman()` in `src/triage.ts`): code decides. Severity 2 or 3, an unsure model, or a cyberattack reading means "a human checks now". The model's own needs-a-human answer is kept in reports only.
 - **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`.
@@ -26,7 +26,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 66 tests, tshark as the decoder oracle
+bun install && bun test                    # 76 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -41,7 +41,7 @@ scripts/watch-lab.sh 1                     # the lab as a tmux session: tmux -S 
 bun src/eval.ts nimble:latest --gold gold/gold-v3.json --pack 3   # measure a model on the fixed gold set
 ```
 
-The lab runs inside `unshare -rnm`: a private network namespace with one veth pair (`gwa` → `gwb`) and no uplink. Raw sockets refuse any interface that isn't named `gw*`, and they refuse any namespace that contains a real interface. Lab GOOSE therefore cannot reach a production network.
+The lab runs inside `unshare -rnm`: a private network namespace with one veth pair (`gwa` → `gwb`) and no uplink. Raw sockets refuse any interface that isn't a veth named `gw*`, and any namespace that contains another interface, so a macvlan, a VLAN or a renamed NIC is refused. What the far end of a veth is plugged into is outside the namespace's view: the lab scripts never bridge it, and `scripts/proxmox-lab.sh` refuses a `vmbr9` that has a port.
 
 If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <dir>` mirrors the model with every layer sha256-verified. You then serve it with `OLLAMA_MODELS=<dir> ollama serve`.
 
@@ -50,7 +50,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 **Measured, on this repository's synthetic traffic only:**
 
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
-- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10).
+- Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10), and undoing any one hardening guard does too (`scripts/mutate-hardening.ts`, 14/14).
 - Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 4x), with the same PDU timestamp ages (lab replay retimes each frame).
 - Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 
@@ -72,7 +72,13 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 The gold cases share one generator and are not independent field samples. Several alert classes nearly determine the label, so the eval mostly tests the two classes that need judgement: stNum regression and new publisher.
 
-**Known limit, by design of GOOSE itself.** GOOSE carries no authentication unless the site deploys IEC 62351-6. An attacker who silences a relay for longer than its time-allowed-to-live and then sends crafted frames with a fresh timestamp looks exactly like a reboot, and the rules end up following the forged sequence. The attack is not silent: it raises TTL_EXPIRY and STNUM_REGRESSION, both severity 3, before the rules move on. Closing it needs either authenticated GOOSE or a second, independent view of the same signal (for example the relay's own state read over MMS), which this monitor does not have.
+**Known limits.** GOOSE carries no authentication unless the site deploys IEC 62351-6, so every field in a frame, MAC included, can be forged. A passive monitor can make forgery loud; it cannot always make it impossible.
+
+- A crafted restart: an attacker silences a relay for longer than its learned time-allowed-to-live, then sends frames with a fresh timestamp. That is exactly what a reboot looks like. It raises TTL_EXPIRY and STNUM_REGRESSION (both severity 3) and takes at least 10 s before the rules follow the new sequence.
+- A forward forgery: a frame one state ahead with forged values is a normal state change. The real relay's next frame then reads as STNUM_REGRESSION (severity 3), which is the alarm, but the monitor cannot tell which of the two sources is genuine.
+- Closing both needs authenticated GOOSE or a second, independent view of the same signal, for example the relay's own state read over MMS.
+- A relay whose clock is more than 5 s behind (or 1 s ahead of) the sensor, or one that keeps its stNum across a reboot, never shows restart evidence: it keeps alarming until a person looks. stNum and sqNum wrap-around at 2^32 is treated as a regression.
+- A baseline publisher that is already silent when the monitor starts is not reported. The Ed2 `simulation` flag is read as the Ed1 test flag, quality `test` bits and Beh/Mod are not read, and values are compared as booleans, integers, floats and bit strings only.
 
 ## Repository layout
 

@@ -31,6 +31,20 @@ export function labNamespaceProblem(ifaces = liveInterfaces()): string | null {
   return foreign.length ? `network namespace has non-lab interfaces (${foreign.join(", ")}); run inside the lab namespace` : null;
 }
 
+/** The kernel's link type for an interface ("veth", "macvlan", ...), or null for a plain or unknown device. */
+export function linkKind(iface: string): string | null {
+  const r = Bun.spawnSync(["ip", "-d", "-j", "link", "show", "dev", iface]);
+  if (r.exitCode !== 0) return null;
+  return (JSON.parse(r.stdout.toString()) as { linkinfo?: { info_kind?: string } }[])[0]?.linkinfo?.info_kind ?? null;
+}
+
+// Only a veth is a lab link. A macvlan, ipvlan or VLAN named gw* sits on a real parent NIC, and a
+// physical NIC renamed gw* has no link kind at all. What a veth's far end is plugged into is outside
+// this namespace's view: the lab scripts never bridge it, and proxmox-lab.sh checks vmbr9 has no port.
+export function labLinkProblem(iface: string, kind: string | null): string | null {
+  return kind === "veth" ? null : `${iface} is ${kind ?? "a physical or unknown device"}, not a veth lab link`;
+}
+
 export class RawSocket {
   private fd: number;
 
@@ -40,6 +54,8 @@ export class RawSocket {
     if (problem) throw new Error(`refusing to open a raw socket: ${problem}`);
     const index = libc.symbols.if_nametoindex(Buffer.from(iface + "\0"));
     if (!index) throw new Error(`no such interface ${iface}`);
+    const link = labLinkProblem(iface, linkKind(iface));
+    if (link) throw new Error(`refusing to open a raw socket: ${link}`);
     this.fd = libc.symbols.socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (this.fd < 0) throw new Error("socket(AF_PACKET) failed: needs CAP_NET_RAW (run inside `unshare -rn`)");
     // struct sockaddr_ll: u16 family, be16 protocol, i32 ifindex, u16 hatype, u8 pkttype, u8 halen, u8 addr[8]
