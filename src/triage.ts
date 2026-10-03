@@ -129,8 +129,8 @@ export function distribution(raw: unknown, keys: readonly string[]): Record<stri
   return out;
 }
 
-// We never trust the supplier's `choice`, `score`, `confidence` or `legend`:
-// the winner is recomputed from the distribution.
+// The supplier's `choice`, `score`, `confidence` and `legend` are never trusted:
+// the winner is recomputed from the probability distribution.
 export function validate(raw: any, model: string): Omit<Triage, "latencyMs"> {
   const ans = raw?.answers;
   if (!ans) throw new Error("no answers");

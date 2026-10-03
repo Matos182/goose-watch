@@ -317,3 +317,28 @@ describe("Review round 4 (gpt-6-astra, final)", () => {
     expect(out).toEqual(["LATE11000"]); // the update 10 s after the overflow began names the offender of that moment
   });
 });
+
+describe("Guards the first mutation runs could not see", () => {
+  // Same set-up as the C26 adoption tests: anchor stNum 5 until 3 s, silence, then frames from 10 s.
+  // `frames` are [ms after 10 s, PDU timestamp age, stNum, sqNum]; a stNum 5 probe at 59 s jumps only if adopted.
+  function adoptedAfter(frames: [number, number, number, number][]) {
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 3; i++) engine.ingest(ev({ tMs: i * 1000, stNum: 5, sqNum: i }));
+    for (const [dt, age, stNum, sqNum] of frames) engine.ingest(ev({ tMs: 10_000 + dt, pduTMs: 10_000 + dt - age, stNum, sqNum }));
+    engine.ingest(ev({ tMs: 59_000, stNum: 5, sqNum: 50 }));
+    return engine.alerts.at(-1)!.cls === "STNUM_JUMP";
+  }
+  test("C26 duplicate frames do not count towards adoption", () => {
+    expect(adoptedAfter([[0, 0, 1, 0], [6_000, 0, 1, 1], [12_000, 0, 1, 1]])).toBe(false);
+    expect(adoptedAfter([[0, 0, 1, 0], [6_000, 0, 1, 1], [12_000, 0, 1, 2]])).toBe(true);
+  });
+  test("C26 a lower frame starts its own shadow and cannot borrow the evidence of the one it replaces", () => {
+    // A fresh restart candidate at stNum 3, then a stale stNum 1 frame takes over: never adopted.
+    expect(adoptedAfter([[0, 0, 3, 0], [1_000, 0, 3, 1], [2_000, 60_000, 1, 0], [6_000, 0, 1, 1], [12_000, 0, 1, 2]])).toBe(false);
+  });
+  test("C28 a condition that never pauses is still announced again after a minute", () => {
+    const engine = new RuleEngine(baseline);
+    for (let t = 1_000; t <= 75_000; t += 1_000) engine.ingest(ev({ tMs: t, sqNum: t / 1000, test: true }));
+    expect(engine.alerts.filter((a) => a.cls === "TEST_MODE").length).toBe(2);
+  });
+});
