@@ -228,6 +228,7 @@ export class RuleEngine {
           macMatchesBaseline: known?.srcMac === e.srcMac,
           testFlag: e.test,
           simulationBit: e.simulationBit,
+          ...(known?.timeAllowedToLive !== undefined && { timeAllowedToLive: known.timeAllowedToLive }),
           ...(prev && known?.srcMac === e.srcMac && { stNumDelta: e.stNum - prev.stNum, silenceBeforeMs: e.tMs - prev.lastSeen }),
           sqNum: e.sqNum,
           stNum: e.stNum,

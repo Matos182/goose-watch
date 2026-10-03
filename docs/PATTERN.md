@@ -24,7 +24,7 @@ And one rule around all four: **the AI runs locally.** Monitoring data shows who
 - Write a **gold set** of cases whose right answer you know because you built them. Do it before you run the model even once.
 - Fix the **pass bar** in writing first: how often it may say "not sure", and how accurate it must be when it is sure.
 - Re-run on **new held-out cases** after every prompt change. Otherwise you are tuning to the test.
-- Keep watching it live. Here, the model was right on every confident gold case and still read a live attack as "device fault, 68% sure". The rule caught it.
+- Keep watching it live. Here, the model was right on every confident gold case and still read a live attack as "device fault, 67–68% sure". The rule caught it.
 
 `docs/EVAL.md` shows a worked example.
 

@@ -15,7 +15,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **A1** No real utility capture, IP, hostname, MAC or SCD file appears in the repository or in any hosted API call. All traffic is synthetic. Probe: a scan of the full git history for private identifiers, and an inventory of every IP and MAC ever committed (all synthetic).
 - [x] **A2** No GOOSE frame is ever emitted onto a production network by these tools. Probe: the raw-socket sender refuses any interface that is not a veth named `gw*` and any namespace that contains another interface (`test/rawsock.test.ts`; a macvlan named `gw*` refused live), and `scripts/proxmox-lab.sh` refuses a `vmbr9` with a bridge port. Outside the guard's view: where the far end of a veth is plugged in.
 - [x] **A3** Model output alone never raises, lowers or clears an alert. Probe: same as C16.
-- [x] **A4** No capture reaches a hosted model: the model adapter accepts only a loopback endpoint. Probe: `test/triage.test.ts` (a LAN or remote endpoint is refused).
+- [x] **A4** The model adapter refuses any endpoint that is not a loopback URL, so this tool sends no capture to a hosted model. Probe: `test/triage.test.ts` (a LAN or remote endpoint is refused). Outside its view: a loopback port that is itself forwarded elsewhere (an SSH tunnel, a proxy).
 
 ## Synthetic scenarios
 
@@ -43,7 +43,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C6** For every alert, the local model returns a validated, typed answer through Ollama's `/v1/systemone`. Invalid or missing answers become a typed failure, never a guess. Probe: a live call on each candidate model.
 - [x] **C7** The gold set, class definitions and stop rule are committed **before** the first model run. Probe: `git log` order of `gold/` and `docs/EVAL.md` against `reports/`.
 - [x] **C8** Each model gets an eval report with per-class precision and recall (n and Wilson bounds), Brier score, the "not sure" rate and latency p50/p95. Probe: `reports/`.
-- [x] **C16** The model can never suppress a rule alarm. Probe: `bun test` with the adapter forced to "normal 1.0"; the alert keeps its full severity.
+- [x] **C16** The model can never suppress a rule alarm: the rule engine and the CLI import no model code, and the verdict always carries the rule's severity. Probe: `test/triage.test.ts` (an import check on `src/rules.ts` and `src/cli.ts`, and the adapter forced to maintenance 1.0).
 - [x] **C18** Whether a human must look is decided in code, never by the model's needs-a-human answer. Severity 2 or 3, an unsure or unavailable model, or a cyberattack reading means a human checks now. Probe: `test/triage.test.ts` over every class × cause × probability × model answer.
 
 ## Live sensor and board
@@ -51,7 +51,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C10** Live capture works end to end: a scenario replayed on an isolated link raises the same alerts as the offline decode, with the same PDU ages. Probe: `scripts/live-parity.sh`, 14/14 at 4×.
 - [x] **C11** The board shows each alert with the rule that fired, the model's probabilities and one plain sentence, updating live. Probe: browser screenshot.
 - [ ] **C13** A lab run can be watched live from a terminal. Probe: `scripts/watch-lab.sh` opens a tmux session with capture, replay and alert panes.
-- [x] **C14** A Proxmox deployment is reproducible from the repository, on an isolated bridge with no uplink. Probe: `scripts/proxmox-lab.sh`; a fresh container reaches C10 (13/13).
+- [x] **C14** A Proxmox deployment is reproducible from the repository, on an isolated bridge with no uplink. Probe: `scripts/proxmox-lab.sh`; a fresh container reached C10 (13/13) on 2026-10-02, on an earlier version with 13 scenarios; not re-run since.
 - [x] **C15** The README states what is and is not measured. Probe: read it.
 
 ## Reusable pattern

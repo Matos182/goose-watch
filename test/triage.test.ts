@@ -66,6 +66,12 @@ describe("adapter", () => {
 });
 
 describe("C16/A3 the model never changes the rule's verdict", () => {
+  test("the rule engine and the CLI import no model code, only types", async () => {
+    for (const f of ["src/rules.ts", "src/cli.ts"]) {
+      const imports = (await Bun.file(f).text()).split("\n").filter((l) => /^import /.test(l));
+      for (const l of imports.filter((l) => /\.\/(triage|hops|board|eval)"/.test(l))) expect(l).toMatch(/^import type /);
+    }
+  });
   test("a model certain that all is normal cannot lower severity or clear the alert", async () => {
     reply = () => Response.json(answer({ cyberattack: 0, maintenance: 1, device_fault: 0, unclear: 0 }, 0, { "0": 1, "1": 0, "2": 0 }));
     const r = await new SystemOneAdapter(base, "nimble").triage(alert, ctx);

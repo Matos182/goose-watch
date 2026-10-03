@@ -24,3 +24,7 @@ jobs:
           bun src/cli.ts scenarios "$RUNNER_TEMP/fx"
           for f in "$RUNNER_TEMP"/fx/*.pcap; do cmp "$f" "fixtures/$(basename "$f")"; done
       - run: bun test
+      - name: negative controls (each rule, each hardening guard must be caught by the suite)
+        run: |
+          scripts/mutate-rules.sh
+          bun scripts/mutate-hardening.ts

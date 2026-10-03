@@ -36,7 +36,8 @@ const STALE_MS = 5_000;
 
 export function facts(a: Alert) {
   const c = a.context;
-  const tal = typeof a.detail.timeAllowedToLive === "number" ? a.detail.timeAllowedToLive : 2000;
+  // The learned TAL first (rules time silence against it too); 2000 ms only for alerts recorded without one.
+  const tal = c.timeAllowedToLive ?? (typeof a.detail.timeAllowedToLive === "number" ? a.detail.timeAllowedToLive : 2000);
   return {
     alert: a.cls,
     publisher_in_learned_baseline: c.publisherInBaseline,

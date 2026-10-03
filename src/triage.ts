@@ -41,6 +41,7 @@ export interface AlertContext {
   sqNum?: number;
   pduTimestampAgeMs?: number; // frame arrival - PDU t
   silenceBeforeMs?: number; // gap since the stream's previous frame
+  timeAllowedToLive?: number; // the publisher's learned TAL, which 'silent before' is measured against
   confRevChanged?: boolean;
   otherAlertsLast60s: string[];
 }
