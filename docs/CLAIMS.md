@@ -15,7 +15,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [ ] **A1** No real utility capture, IP, hostname, MAC, SCD file or photo appears in the repository, the video or any hosted API call. All traffic is synthetic. Probe: grep of the repository (clean); review of the final video frames (open).
 - [x] **A2** No GOOSE frame is ever emitted onto a production network. Probe: the raw-socket sender refuses any interface not named `gw*` and any namespace that contains a real interface (`test/rawsock.test.ts`).
 - [x] **A3** Model output alone never raises, lowers or clears an alert. Probe: same as C16.
-- [x] **A4** No hosted model call with non-synthetic data, and every hosted run has a request cap fixed beforehand. Probe: the adapter refuses any non-loopback endpoint (`test/triage.test.ts`).
+- [x] **A4** No capture reaches a hosted model: the model adapter accepts only a loopback endpoint. Probe: `test/triage.test.ts` (a LAN or remote endpoint is refused).
 
 ## Synthetic scenarios
 
