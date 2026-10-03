@@ -122,7 +122,10 @@ function addCard(item, models) {
   const a = item.alert, card = el("div", "card");
   card.append(el("div", "bar s" + a.severity));
   const what = el("div", "what"), top = el("div", "top");
-  top.append(el("span", "sev s" + a.severity, `${a.severity} · ${SEV[a.severity]}`), el("span", "time", new Date(a.tMs).toLocaleTimeString()));
+  const times = el("span", "time");
+  const showTimes = (count, lastMs) => { times.textContent = new Date(a.tMs).toLocaleTimeString() + (count > 1 ? ` · ×${count}, last ${new Date(lastMs).toLocaleTimeString()}` : ""); };
+  showTimes(a.count, a.lastMs);
+  top.append(el("span", "sev s" + a.severity, `${a.severity} · ${SEV[a.severity]}`), times);
   what.append(top, el("div", "title", TITLES[a.cls] ?? a.cls), el("p", "plain", item.plain));
   const src = el("div", "src"); src.append(el("b", "", a.cls + "  "), document.createTextNode(`${a.gocbRef} · ${a.srcMac}`));
   what.append(src);
@@ -134,7 +137,7 @@ function addCard(item, models) {
   ai.append(pending);
   card.append(what, ai);
   feed.prepend(card);
-  cards.set(item.id, { slots, pending, n: item.readings.length, total: models.length });
+  cards.set(item.id, { slots, pending, showTimes, n: item.readings.length, total: models.length });
 }
 
 let models = [];
@@ -150,6 +153,7 @@ es.addEventListener("reading", (e) => {
   const { id, reading } = JSON.parse(e.data), c = cards.get(id); if (!c) return;
   c.slots.append(readingEl(reading)); c.n++; if (c.n >= c.total) c.pending.textContent = "";
 });
+es.addEventListener("update", (e) => { const { id, count, lastMs } = JSON.parse(e.data); cards.get(id)?.showTimes(count, lastMs); });
 es.addEventListener("reset", () => { feed.replaceChildren(); const e = el("div", "", "new run · listening to the bus…"); e.id = "empty"; feed.append(e); cards.clear(); });
 const conn = document.getElementById("conn");
 es.onopen = () => { conn.textContent = "live"; conn.classList.remove("down"); };

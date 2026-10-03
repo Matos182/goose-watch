@@ -8,6 +8,7 @@ import { learn, RuleEngine, safeText, type Baseline } from "./rules";
 import { generate, SCENARIOS } from "./scenarios";
 import { pcapHeader, pcapRecord, readPcap, retime, writePcap } from "./goose";
 import { RawSocket } from "./rawsock";
+import { updateGate } from "./updates";
 
 const [cmd, ...args] = Bun.argv.slice(2);
 
@@ -55,10 +56,13 @@ switch (cmd) {
     const noTal = baseline.publishers.filter((p) => p.timeAllowedToLive === undefined).length;
     if (noTal) console.error(`warning: ${noTal} baseline publisher(s) have no learned timeAllowedToLive; re-run \`learn\` so frames cannot set their own TTL`);
     const asJson = args.includes("--json");
+    const gate = updateGate();
     const engine = new RuleEngine(baseline, (a, isNew) => {
-      if (!isNew) return;
-      if (asJson) console.log(JSON.stringify(a));
-      else console.log(`${new Date(a.tMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  ${a.srcMac}`);
+      const out = gate(a, isNew);
+      if (out === null) return;
+      if (asJson) console.log(JSON.stringify(out === "new" ? a : out));
+      else if (out === "new") console.log(`${new Date(a.tMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  ${a.srcMac}`);
+      else console.log(`${new Date(a.lastMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  still recurring ×${a.count}`);
     });
     const live = !file;
     if (live) setInterval(() => engine.tick(Date.now()), 250);

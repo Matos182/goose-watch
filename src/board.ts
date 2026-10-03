@@ -3,13 +3,14 @@
 // reading, and serves a live page on loopback. Rules decide; models only comment.
 // usage: bun src/board.ts [--alerts reports/live/board.jsonl] [--port 8099] [--models nimble:latest,tev1:0.8b@http://127.0.0.1:11436] [--base http://127.0.0.1:11434]
 
-import { existsSync, statSync, openSync, readSync, closeSync } from "node:fs";
+import { existsSync, statSync, openSync, readSync, closeSync, readFileSync } from "node:fs";
 import type { Alert } from "./rules";
 import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
 import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
 import { triage2, triage3 } from "./hops";
 import { Backlog } from "./backlog";
+import type { AlertUpdate } from "./updates";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
@@ -46,13 +47,15 @@ function reading(model: string, a: Alert, r: TriageResult): Reading {
 
 // One model call at a time keeps the GPU predictable during a live demo; the backlog is capped.
 const backlog = new Backlog();
-function onAlert(a: Alert) {
+function onAlert(a: Alert, ask = true) {
   const item: Item = { id: nextId++, alert: { ...a, gocbRef: safeText(a.gocbRef, 80) }, plain: RULE_TEXT[a.cls], readings: [] };
   items.push(item);
   if (items.length > 200) items = items.slice(-200);
   broadcast("alert", item);
   const post = (rd: Reading) => { item.readings.push(rd); broadcast("reading", { id: item.id, reading: rd }); };
-  for (const [i, ad] of adapters.entries()) {
+  // Alerts from before the board started are shown again, but not sent to the models.
+  if (!ask) for (const m of models) post({ model: m, text: "AI not asked (alert from before the board started)", notSure: true });
+  else for (const [i, ad] of adapters.entries()) {
     backlog.run(
       async () => {
         try {
@@ -66,9 +69,35 @@ function onAlert(a: Alert) {
   }
 }
 
-// Tail the JSONL the lab writes. A {"reset":true} line starts a new story loop.
-let offset = existsSync(file) ? statSync(file).size : 0;
+/** A repeat of an open alert: update its count on the card. */
+function onUpdate(u: AlertUpdate) {
+  const it = items.find((x) => x.alert.cls === u.update.cls && x.alert.key === u.update.key && x.alert.tMs === u.update.tMs);
+  if (!it) return;
+  it.alert.count = u.count;
+  it.alert.lastMs = u.lastMs;
+  broadcast("update", { id: it.id, count: u.count, lastMs: u.lastMs });
+}
+
+function handle(l: string, live: boolean) {
+  if (!l.trim()) return;
+  let o: any;
+  try { o = JSON.parse(l); } catch { console.error(`board: skipped a malformed alert line (${l.length} bytes)`); return; }
+  if (o.reset) { items = []; broadcast("reset", {}); return; }
+  if (o.update) { onUpdate(o as AlertUpdate); return; }
+  onAlert(o as Alert, live);
+}
+
+// On start, show the current run again (everything after the last {"reset":true}, up to the last
+// 200 lines), so a restarted board does not hide a condition that is still open. Then tail the file.
+let offset = 0;
 let partial = "";
+if (existsSync(file)) {
+  const text = readFileSync(file, "utf8");
+  offset = Buffer.byteLength(text);
+  const lines = text.split("\n");
+  const lastReset = lines.findLastIndex((l) => l.includes('"reset":true'));
+  for (const l of lines.slice(lastReset + 1).slice(-200)) handle(l, false);
+}
 setInterval(() => {
   if (!existsSync(file)) return;
   const size = statSync(file).size;
@@ -82,13 +111,7 @@ setInterval(() => {
   partial += buf.toString("utf8");
   const lines = partial.split("\n");
   partial = lines.pop()!;
-  for (const l of lines) {
-    if (!l.trim()) continue;
-    let o: any;
-    try { o = JSON.parse(l); } catch { console.error(`board: skipped a malformed alert line (${l.length} bytes)`); continue; }
-    if (o.reset) { items = []; broadcast("reset", {}); continue; }
-    onAlert(o as Alert);
-  }
+  for (const l of lines) handle(l, true);
 }, 200);
 
 const ALLOWED_HOSTS = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);

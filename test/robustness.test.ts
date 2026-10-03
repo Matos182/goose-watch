@@ -4,6 +4,7 @@ import type { GooseEvent } from "../src/decode";
 import { invalidFields, learn, MAX_ALERTS, MAX_UNKNOWN_STREAMS, RuleEngine, UNKNOWN_OVERFLOW_KEY } from "../src/rules";
 import { Backlog } from "../src/backlog";
 import { parseEkLine } from "../src/decode";
+import { updateGate } from "../src/updates";
 
 const ev = (o: Partial<GooseEvent>): GooseEvent => ({
   tMs: 0, srcMac: "02:00:00:00:00:01", dstMac: "01:0c:cd:01:00:01", vlanId: null, appId: 1, simulationBit: false,
@@ -267,5 +268,15 @@ describe("C31 a baseline publisher that never appears is reported", () => {
     engine.tick(0);
     for (let t = 1_000; t <= 30_000; t += 1_000) engine.ingest(ev({ tMs: t, sqNum: t / 1000 }));
     expect(engine.alerts).toEqual([]);
+  });
+});
+
+describe("C32 repeats stay visible downstream", () => {
+  test("a repeat is printed at most once per 10 s, with its running count", () => {
+    const gate = updateGate();
+    const out: unknown[] = [];
+    const e2 = new RuleEngine(baseline, (a, isNew) => { const o = gate(a, isNew); if (o) out.push(o === "new" ? a.cls : [o.count, o.lastMs]); });
+    for (let t = 1_000; t <= 25_000; t += 1_000) e2.ingest(ev({ tMs: t, sqNum: t / 1000, test: true }));
+    expect(out).toEqual(["TEST_MODE", [11, 11_000], [21, 21_000]]);
   });
 });
