@@ -26,7 +26,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 62 tests, tshark as the decoder oracle
+bun install && bun test                    # 66 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -71,6 +71,8 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 - Model behaviour outside these 11 synthetic evidence patterns.
 
 The gold cases share one generator and are not independent field samples. Several alert classes nearly determine the label, so the eval mostly tests the two classes that need judgement: stNum regression and new publisher.
+
+**Known limit, by design of GOOSE itself.** GOOSE carries no authentication unless the site deploys IEC 62351-6. An attacker who silences a relay for longer than its time-allowed-to-live and then sends crafted frames with a fresh timestamp looks exactly like a reboot, and the rules end up following the forged sequence. The attack is not silent: it raises TTL_EXPIRY and STNUM_REGRESSION, both severity 3, before the rules move on. Closing it needs either authenticated GOOSE or a second, independent view of the same signal (for example the relay's own state read over MMS), which this monitor does not have.
 
 ## Repository layout
 

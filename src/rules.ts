@@ -72,18 +72,25 @@ interface Sequence {
   values: string;
 }
 
+/** A stream's anchor is the sequence the rules trust; its fields are the anchor's. */
 interface StreamState extends Sequence {
-  lastSeen: number;
+  lastSeen: number; // any frame on the stream (for TTL)
+  anchorSeen: number; // the last frame that continued the anchor
   tal: number;
   expired: boolean;
-  // A lower sequence seen after a regression. It is adopted only once it has run on its own,
-  // so a real relay restart re-arms the rules while a replay next to a live publisher never does.
-  restart?: Sequence & { frames: number; since: number };
+  // A lower sequence after a regression. Every sequence rule runs on it from its first frame, so
+  // nothing goes unwatched while it is followed. It replaces the anchor only with restart evidence.
+  shadow?: Sequence & { frames: number; since: number; restartEvidence: boolean };
 }
 
 const DEDUPE_MS = 10_000;
-// A restarted sequence is adopted after this many consistent frames and two time-allowed-to-live
-// windows with no frame from the old sequence: a publisher that is still alive would have shown up.
+// Restart evidence, fixed when the lower sequence starts: the anchor was silent for longer than its
+// time-allowed-to-live (a rebooting relay goes quiet), and the new message's own timestamp is fresh
+// (a replay carries the old one). Without both, the lower sequence is never adopted and its
+// STNUM_REGRESSION keeps recurring: an extra alert, never a silence.
+const FRESH_MS = 5_000;
+// With evidence, the lower sequence is adopted after this many frames and two time-allowed-to-live
+// windows with no frame from the anchor: a publisher that is still alive would have shown up.
 const RESTART_FRAMES = 3;
 const RESTART_TAL_WINDOWS = 2;
 // Bounds for a flood of forged publishers: memory and alerts stay finite whatever arrives.
@@ -197,34 +204,60 @@ export class RuleEngine {
     const values = e.values.join(",");
     const s = this.state.get(key);
     if (!s) {
-      this.state.set(key, { stNum: e.stNum, sqNum: e.sqNum, values, lastSeen: e.tMs, tal: e.timeAllowedToLive, expired: false });
+      this.state.set(key, { stNum: e.stNum, sqNum: e.sqNum, values, lastSeen: e.tMs, anchorSeen: e.tMs, tal: e.timeAllowedToLive, expired: false });
       return;
-    }
-    let accept = true;
-    if (e.stNum < s.stNum) {
-      this.raise("STNUM_REGRESSION", e, { stNum: e.stNum, lastStNum: s.stNum });
-      accept = false; // never let a replay rewind our view of the stream...
-      this.followRestart(s, e, values); // ...until the lower sequence proves to be a restart
-    } else if (e.stNum > s.stNum + 1) {
-      this.raise("STNUM_JUMP", e, { stNum: e.stNum, lastStNum: s.stNum });
-    } else if (e.stNum === s.stNum) {
-      if (e.sqNum < s.sqNum) {
-        this.raise("SQNUM_RESET", e, { sqNum: e.sqNum, lastSqNum: s.sqNum, stNum: e.stNum });
-      }
-      if (values !== s.values) {
-        this.raise("DATA_WITHOUT_STNUM", e, { stNum: e.stNum, sqNum: e.sqNum });
-        accept = false;
-      }
     }
     s.lastSeen = e.tMs;
     s.tal = e.timeAllowedToLive;
     s.expired = false;
-    if (e.stNum >= s.stNum) s.restart = undefined; // the old sequence is alive: the lower one was a replay
-    if (accept) {
-      s.stNum = e.stNum;
-      s.sqNum = e.sqNum;
-      s.values = values;
+
+    if (e.stNum >= s.stNum) {
+      // The anchor continues, so it is alive and anything lower was a replay. If a never-adopted
+      // shadow climbs back to here, its frames meet the anchor's rules: extra alerts, never silence.
+      s.shadow = undefined;
+      s.anchorSeen = e.tMs;
+      this.step(s, e, values);
+      return;
     }
+
+    // Never let a lower sequence rewind the anchor: follow it as a shadow instead.
+    this.raise("STNUM_REGRESSION", e, { stNum: e.stNum, lastStNum: s.stNum });
+    const sh = s.shadow;
+    if (!sh || e.stNum < sh.stNum) {
+      const age = e.pduTMs === null ? null : e.tMs - e.pduTMs;
+      const restartEvidence = e.tMs - s.anchorSeen > s.tal && age !== null && Math.abs(age) <= FRESH_MS;
+      s.shadow = { stNum: e.stNum, sqNum: e.sqNum, values, frames: 1, since: e.tMs, restartEvidence };
+      return;
+    }
+    if (!this.step(sh, e, values)) return;
+    sh.frames += 1;
+    if (sh.restartEvidence && sh.frames >= RESTART_FRAMES && e.tMs - sh.since >= RESTART_TAL_WINDOWS * e.timeAllowedToLive) {
+      s.stNum = sh.stNum;
+      s.sqNum = sh.sqNum;
+      s.values = sh.values;
+      s.anchorSeen = e.tMs;
+      s.shadow = undefined;
+    }
+  }
+
+  /**
+   * The sequence rules for one frame on one sequence (the anchor or a shadow), for a frame whose
+   * stNum is not lower than the sequence's. Returns false when the frame must not advance it.
+   */
+  private step(q: Sequence, e: GooseEvent, values: string): boolean {
+    if (e.stNum > q.stNum + 1) {
+      this.raise("STNUM_JUMP", e, { stNum: e.stNum, lastStNum: q.stNum });
+    } else if (e.stNum === q.stNum) {
+      if (e.sqNum < q.sqNum) this.raise("SQNUM_RESET", e, { sqNum: e.sqNum, lastSqNum: q.sqNum, stNum: e.stNum });
+      if (values !== q.values) {
+        this.raise("DATA_WITHOUT_STNUM", e, { stNum: e.stNum, sqNum: e.sqNum });
+        return false; // a forged value never advances the sequence
+      }
+    }
+    q.stNum = e.stNum;
+    q.sqNum = e.sqNum;
+    q.values = values;
+    return true;
   }
 
   /** Key for an unknown stream's alerts: its own while under the bound, one shared key past it. */
@@ -233,34 +266,6 @@ export class RuleEngine {
     if (this.unknown.size >= MAX_UNKNOWN_STREAMS) return UNKNOWN_OVERFLOW_KEY;
     this.unknown.add(key);
     return key;
-  }
-
-  /**
-   * Follow a lower sequence after a regression. A relay restart is a fresh sequence that keeps going
-   * (stNum steady with sqNum rising, or stNum + 1). The rules on it stay armed while it is followed:
-   * a value change without a new stNum is still forged data.
-   */
-  private followRestart(s: StreamState, e: GooseEvent, values: string) {
-    const r = s.restart;
-    const continues = r && (e.stNum === r.stNum ? e.sqNum > r.sqNum : e.stNum === r.stNum + 1);
-    if (!r || !continues) {
-      s.restart = { stNum: e.stNum, sqNum: e.sqNum, values, frames: 1, since: e.tMs };
-      return;
-    }
-    if (e.stNum === r.stNum && values !== r.values) {
-      this.raise("DATA_WITHOUT_STNUM", e, { stNum: e.stNum, sqNum: e.sqNum });
-      return; // a forged value never advances the restarted sequence
-    }
-    r.stNum = e.stNum;
-    r.sqNum = e.sqNum;
-    r.values = values;
-    r.frames += 1;
-    if (r.frames >= RESTART_FRAMES && e.tMs - r.since >= RESTART_TAL_WINDOWS * e.timeAllowedToLive) {
-      s.stNum = r.stNum;
-      s.sqNum = r.sqNum;
-      s.values = r.values;
-      s.restart = undefined;
-    }
   }
 }
 

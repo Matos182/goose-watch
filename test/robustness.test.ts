@@ -45,6 +45,42 @@ describe("C26 a relay restart re-arms the rules", () => {
   });
 });
 
+describe("C26 the lower sequence is adopted only with restart evidence", () => {
+  // Anchor at stNum 5 for 3 s, then 6 s of silence, then a lower sequence, one frame per second.
+  // `age` is the PDU timestamp's age on arrival: fresh after a reboot, old in a replay.
+  function afterSilence(age: number, n: number) {
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 3; i++) engine.ingest(ev({ tMs: i * 1000, pduTMs: 0, stNum: 5, sqNum: i }));
+    for (let i = 0; i < n; i++) {
+      const tMs = 10_000 + i * 1000;
+      engine.ingest(ev({ tMs, pduTMs: tMs - age, stNum: 1, sqNum: i }));
+    }
+    return { engine, regression: () => engine.alerts.find((a) => a.cls === "STNUM_REGRESSION")!.count };
+  }
+  test("a reboot (silence, fresh timestamp) is adopted after two TAL windows and stops recurring", () => {
+    const { engine, regression } = afterSilence(0, 5);
+    expect(engine.alerts.map((a) => [a.cls, a.severity])).toEqual([["TTL_EXPIRY", 3], ["STNUM_REGRESSION", 3]]);
+    expect(regression()).toBe(5);
+    for (let i = 5; i < 20; i++) engine.ingest(ev({ tMs: 10_000 + i * 1000, pduTMs: 10_000, stNum: 1, sqNum: i }));
+    expect(regression()).toBe(5); // adopted: the stream is normal again
+    engine.ingest(ev({ tMs: 31_000, pduTMs: 10_000, stNum: 1, sqNum: 21, values: ["False"] }));
+    expect(engine.alerts.at(-1)!.cls).toBe("DATA_WITHOUT_STNUM"); // and fully armed
+  });
+  test("a replay after silence carries an old timestamp and is never adopted", () => {
+    const { regression } = afterSilence(60_000, 20);
+    expect(regression()).toBe(20); // every replayed frame keeps the alarm live
+  });
+  test("a stream that was not silent is never adopted, even with a fresh timestamp", () => {
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 23; i++) engine.ingest(ev({ tMs: i * 1000, pduTMs: i * 1000, ...(i <= 3 ? { stNum: 5, sqNum: i } : { stNum: 1, sqNum: i }) }));
+    expect(engine.alerts.find((a) => a.cls === "STNUM_REGRESSION")!.count).toBe(20);
+  });
+  test("a jump inside the followed sequence is caught", () => {
+    const { classes } = run([...heartbeat(5, 0, 3), ...heartbeat(1, 0, 2), { stNum: 3, sqNum: 0 }]);
+    expect(classes).toEqual(["STNUM_REGRESSION", "STNUM_JUMP"]);
+  });
+});
+
 describe("C27 a malformed frame never resets a stream", () => {
   test("NaN stNum raises MALFORMED_PDU and the replay after it is still a regression", () => {
     const { classes } = run([...heartbeat(5, 0, 3), { stNum: NaN }, { stNum: 2, sqNum: 1, values: ["False"] }]);
