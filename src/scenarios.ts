@@ -1,5 +1,5 @@
 // Synthetic GOOSE lab traffic. Every scenario is deterministic (seeded) so
-// tests, the gold set and the video replay the exact same frames.
+// tests, the gold set and the live lab replay the exact same frames.
 
 import { encodeFrame, type GooseFrame, type Packet } from "./goose";
 

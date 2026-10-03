@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The video demo on one machine: the isolated lab (namespace, veth gwa → gwb) loops the
+# The live demo on one machine: the isolated lab (namespace, veth gwa → gwb) loops the
 # story and appends alerts to reports/live/board.jsonl; the board (host side, loopback)
 # tails it, asks the local models and serves http://127.0.0.1:8099.
 # usage: scripts/demo.sh [speed]      stop: scripts/demo.sh stop

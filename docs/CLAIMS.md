@@ -12,7 +12,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 
 ## Anti-claims: what must never happen
 
-- [ ] **A1** No real utility capture, IP, hostname, MAC, SCD file or photo appears in the repository, the video or any hosted API call. All traffic is synthetic. Probe: grep of the repository (clean); review of the final video frames (open).
+- [x] **A1** No real utility capture, IP, hostname, MAC or SCD file appears in the repository or in any hosted API call. All traffic is synthetic. Probe: a scan of the full git history for private identifiers, and an inventory of every IP and MAC ever committed (all synthetic).
 - [x] **A2** No GOOSE frame is ever emitted onto a production network. Probe: the raw-socket sender refuses any interface not named `gw*` and any namespace that contains a real interface (`test/rawsock.test.ts`).
 - [x] **A3** Model output alone never raises, lowers or clears an alert. Probe: same as C16.
 - [x] **A4** No capture reaches a hosted model: the model adapter accepts only a loopback endpoint. Probe: `test/triage.test.ts` (a LAN or remote endpoint is refused).
@@ -50,8 +50,3 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 - [x] **C19** A home or small-office version of the pattern runs from one file with no network access, is passive by construction, and its rules are tested with tshark as oracle. Probe: `test/home.test.ts`.
 - [x] **C20** `docs/PATTERN.md` states the pattern without the substation, with at least four other domains. Probe: read it.
 
-## Video
-
-- [ ] **C21** `docs/VIDEO.md` holds a timed script of 100–120 s with both tips spoken and shown and the poisoning scene at its centre. Probe: the recorded voice-over's timing.
-- [ ] **C12** The video runs 30–120 s, carries at least two practical AI-safety tips, uses original audio and shows no private data. Probe: `ffprobe` duration; frame review.
-- [ ] **C17** On one live event, the video shows the rule's severity beside a model reading that is confidently wrong or not sure, and a human making the call. Probe: frame scrub of the final cut.

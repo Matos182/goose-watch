@@ -9,7 +9,7 @@
   "engines": { "bun": ">=1.4" },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p video",
+    "typecheck": "tsc --noEmit -p .",
     "scenarios": "bun src/cli.ts scenarios fixtures",
     "mutate": "scripts/mutate-rules.sh",
     "demo": "scripts/demo.sh"

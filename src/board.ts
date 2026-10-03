@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // The board: tails the lab's alert stream, asks local System One models for their
 // reading, and serves a live page on loopback. Rules decide; models only comment.
-// usage: bun src/board.ts [--alerts reports/live/board.jsonl] [--port 8099] [--models nimble:latest,tev1:0.8b] [--base http://127.0.0.1:11435]
+// usage: bun src/board.ts [--alerts reports/live/board.jsonl] [--port 8099] [--models nimble:latest,tev1:0.8b@http://127.0.0.1:11436] [--base http://127.0.0.1:11434]
 
 import { existsSync, statSync, openSync, readSync, closeSync } from "node:fs";
 import type { Alert } from "./rules";
@@ -14,10 +14,10 @@ const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
 const file = opt("--alerts", "reports/live/board.jsonl");
 const port = Number(opt("--port", "8099"));
-const base = opt("--base", "http://127.0.0.1:11435");
+const base = opt("--base", "http://127.0.0.1:11434"); // a stock `ollama serve`
 // model@base lets each model live on its own server (e.g. nimble on the GPU, tev1 on a CPU-only Ollama),
 // so two models that don't fit in VRAM together never evict each other mid-demo.
-const specs = opt("--models", "nimble:latest@http://127.0.0.1:11435,tev1:latest@http://127.0.0.1:11436").split(",");
+const specs = opt("--models", "nimble:latest").split(",");
 const models = specs.map((m) => m.split("@")[0]!);
 const pack = opt("--pack", "3");
 const adapters = specs.map((m) => new SystemOneAdapter(m.split("@")[1] ?? base, m.split("@")[0]!, 30_000));
