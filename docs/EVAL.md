@@ -1,6 +1,6 @@
 # Model evaluation: classes, gold set and stop rule
 
-Fixed on 2026-10-02, **before the first model run** (claim C7). Changing anything here after a run needs a new held-out gold set (seeds ≥ 300), never a re-run on this one.
+Fixed on 2026-10-02, **before the first model run** (claim C7 in [CLAIMS.md](CLAIMS.md)). Changing anything here after a run needs a new held-out gold set (seeds ≥ 300), never a re-run on this one.
 
 ## What the model is asked
 
@@ -10,7 +10,7 @@ Pack `triage-pack-1` (`src/triage.ts`) asks three questions about one alert:
 - **urgency** (Score, 3 levels): shown only, never used.
 - **needs_human** (Noul): shown only, never used.
 
-The model never sets severity. Severity is always the rule's (claims C16/A3).
+The model never sets severity. Severity is always the rule's (claims C16 and A3).
 
 ## Gold set
 
@@ -43,7 +43,7 @@ A model that STOPs is still allowed on the board, labelled "not reliable for thi
 
 ## Pack 2 (hops), fixed 2026-10-02 before its first run
 
-`src/pack2.ts` works in hops:
+`src/hops.ts` works in hops:
 
 - **Hop 0 (code):** measures the facts.
 - **Hop 1 (model):** a System One Choice between evidence patterns (replay, restart, test equipment, impersonation, other). It runs only for alert classes whose cause depends on the evidence: STNUM_REGRESSION, NEW_PUBLISHER and SQNUM_RESET.

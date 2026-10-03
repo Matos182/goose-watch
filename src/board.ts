@@ -8,7 +8,7 @@ import type { Alert } from "./rules";
 import { RULE_TEXT, safeText } from "./rules";
 import { STOP_RULE } from "./eval";
 import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
-import { triage2, triage3 } from "./pack2";
+import { triage2, triage3 } from "./hops";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);

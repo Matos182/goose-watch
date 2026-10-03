@@ -1,12 +1,18 @@
 {
   "name": "goose-watch",
   "version": "0.1.0",
+  "description": "Passive IEC 61850 GOOSE monitor: deterministic rules decide, a local AI explains with honest doubt, a human decides.",
+  "keywords": ["iec-61850", "goose", "ot-security", "ics", "substation", "local-ai", "ollama"],
   "private": true,
   "type": "module",
   "license": "MIT",
+  "engines": { "bun": ">=1.4" },
   "scripts": {
     "test": "bun test",
-    "scenarios": "bun src/cli.ts scenarios fixtures"
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p video",
+    "scenarios": "bun src/cli.ts scenarios fixtures",
+    "mutate": "scripts/mutate-rules.sh",
+    "demo": "scripts/demo.sh"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

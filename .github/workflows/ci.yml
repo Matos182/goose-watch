@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: tshark (Wireshark stable PPA, ≥ 4.4)
+        run: |
+          sudo add-apt-repository -y ppa:wireshark-dev/stable
+          sudo apt-get update
+          echo "wireshark-common wireshark-common/install-setuid boolean false" | sudo debconf-set-selections
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+          tshark --version | head -1
+      - run: bun install --frozen-lockfile
+      - run: bunx tsc --noEmit -p .
+      - name: fixtures are pure generator output
+        run: |
+          bun src/cli.ts scenarios "$RUNNER_TEMP/fx"
+          for f in "$RUNNER_TEMP"/fx/*.pcap; do cmp "$f" "fixtures/$(basename "$f")"; done
+      - run: bun test

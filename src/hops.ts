@@ -1,4 +1,4 @@
-// triage-pack-2: analysis in hops, each narrower than v1's single broad question.
+// triage packs 2 and 3: analysis in hops, each narrower than v1's single broad question.
 //
 //   hop 0 (code)  measure facts exactly: silence before, PDU timestamp age, sqNum at 0,
 //                 stNum near 1, flags, baseline membership. Facts are never asked of a model.

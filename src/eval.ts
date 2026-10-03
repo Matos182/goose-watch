@@ -4,7 +4,7 @@
 import { mkdirSync } from "node:fs";
 import type { GoldCase } from "./gold";
 import { CAUSES, SystemOneAdapter, type Cause, type TriageResult } from "./triage";
-import { triage2, triage3 } from "./pack2";
+import { triage2, triage3 } from "./hops";
 
 // Fixed in docs/EVAL.md before the first model run. Do not tune on this gold set.
 export const STOP_RULE = {
