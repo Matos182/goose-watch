@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// C29 negative controls for the hardening in src/rules.ts (C26-C28): each mutant undoes one
+// C29 negative controls for the hardening in src/rules.ts (C26-C28): each named mutant undoes one
 // defence, and the test suite must fail for every one. mutate-rules.sh covers whole rules; this
 // covers the guards inside them. usage: bun scripts/mutate-hardening.ts
 import { $ } from "bun";
@@ -15,7 +15,13 @@ const muts: [string, string, string][] = [
   ["future skew unchecked", " && age >= -FUTURE_SKEW_MS && age <= FRESH_MS;", " && age <= FRESH_MS;"],
   ["stale age unchecked", " && age >= -FUTURE_SKEW_MS && age <= FRESH_MS;", " && age >= -FUTURE_SKEW_MS;"],
   ["silence not required", "const restartEvidence = e.tMs - s.anchorSeen > tal && ", "const restartEvidence = "],
-  ["anchor frame keeps shadow", "      s.shadow = undefined;\n      s.anchorSeen = e.tMs;\n      s.talSeen", "      s.anchorSeen = e.tMs;\n      s.talSeen"],
+  ["anchor frame keeps restart eligibility", "      if (s.shadow) s.shadow.restartEvidence = false;\n", ""],
+  ["anchor frame deletes the shadow", "      if (s.shadow) s.shadow.restartEvidence = false;", "      s.shadow = undefined;"],
+  ["replayed copy proves liveness", "if (this.step(s, e, values) && advances) {", "if (this.step(s, e, values)) {"],
+  ["rewinding shadow keeps evidence", "    if (e.stNum === sh.stNum && e.sqNum < sh.sqNum) sh.restartEvidence = false; // a sequence that rewinds is no reboot\n", ""],
+  ["open map uncapped", "    for (const k of this.open.keys()) { if (this.open.size <= MAX_OPEN) break; this.open.delete(k); }\n", ""],
+  ["overflow offender frozen", "      if (key === UNKNOWN_OVERFLOW_KEY) Object.assign(prev.detail, detail); // keep naming the latest offender\n", ""],
+  ["empty gocbRef accepted", "  if (!e.gocbRef) bad.push(\"gocbRef\");\n", ""],
   ["lower never replaces shadow", "if (!sh || e.stNum < sh.stNum) {", "if (!sh) {"],
   ["duplicates count", "const advances = e.stNum > sh.stNum || e.sqNum > sh.sqNum;", "const advances = true;"],
   ["TAL from frame history only", "return known.timeAllowedToLive ?? s.talSeen;", "return s.talSeen;"],

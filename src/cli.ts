@@ -52,6 +52,8 @@ switch (cmd) {
     const stdin = args.includes("--stdin");
     if ((!file && !iface && !stdin) || !basePath) usage();
     const baseline = (await Bun.file(basePath).json()) as Baseline;
+    const noTal = baseline.publishers.filter((p) => p.timeAllowedToLive === undefined).length;
+    if (noTal) console.error(`warning: ${noTal} baseline publisher(s) have no learned timeAllowedToLive; re-run \`learn\` so frames cannot set their own TTL`);
     const asJson = args.includes("--json");
     const engine = new RuleEngine(baseline, (a, isNew) => {
       if (!isNew) return;

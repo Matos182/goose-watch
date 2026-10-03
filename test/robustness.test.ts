@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { GooseEvent } from "../src/decode";
 import { invalidFields, learn, MAX_ALERTS, MAX_UNKNOWN_STREAMS, RuleEngine, UNKNOWN_OVERFLOW_KEY } from "../src/rules";
 import { Backlog } from "../src/backlog";
+import { parseEkLine } from "../src/decode";
 
 const ev = (o: Partial<GooseEvent>): GooseEvent => ({
   tMs: 0, srcMac: "02:00:00:00:00:01", dstMac: "01:0c:cd:01:00:01", vlanId: null, appId: 1, simulationBit: false,
@@ -208,5 +209,46 @@ describe("C28 a flood of forged publishers stays bounded", () => {
     release();
     await b.idle();
     expect(b.size).toBe(0);
+  });
+});
+
+describe("Review round 3 (gpt-6-astra)", () => {
+  test("C26 a replayed copy of the last frame does not keep a dead relay alive", () => {
+    const engine = new RuleEngine(baseline);
+    engine.ingest(ev({ tMs: 1_000, stNum: 5, sqNum: 3 }));
+    for (let t = 2_000; t <= 10_000; t += 1_000) engine.ingest(ev({ tMs: t, stNum: 5, sqNum: 3 }));
+    expect(engine.alerts.map((a) => a.cls)).toEqual(["TTL_EXPIRY"]);
+  });
+  test("C26 the anchor speaking does not blind the rules on the lower sequence", () => {
+    const frames = Array.from({ length: 10 }, (_, i) =>
+      i % 2 ? { stNum: 5, sqNum: 10 + i } : { stNum: 1, sqNum: i, values: [i === 4 ? "False" : "True"] });
+    const { classes } = run([...heartbeat(5, 0, 3), ...frames]);
+    expect(classes).toContain("DATA_WITHOUT_STNUM");
+  });
+  test("C26 a lower sequence that rewinds its sqNum is never adopted", () => {
+    const engine = new RuleEngine(baseline);
+    for (let i = 1; i <= 3; i++) engine.ingest(ev({ tMs: i * 1000, stNum: 5, sqNum: i }));
+    for (const [t, sq] of [[10, 10], [15, 0], [16, 10], [20, 0], [21, 10], [26, 11], [32, 12]]) engine.ingest(ev({ tMs: t! * 1000, pduTMs: 10_000, stNum: 1, sqNum: sq! }));
+    engine.ingest(ev({ tMs: 40_000, stNum: 5, sqNum: 50 }));
+    expect(engine.alerts.at(-1)!.cls).not.toBe("STNUM_JUMP"); // stNum 5 is still the anchor
+  });
+  test("C28 the open-alert map is capped even when every entry is fresh", () => {
+    const engine = new RuleEngine(baseline);
+    engine.ingest(ev({ tMs: 0, stNum: 20_000, sqNum: 0 }));
+    for (let i = 0; i < 3_000; i++) engine.ingest(ev({ tMs: 1 + i / 10, stNum: 10_000 + i, sqNum: 0 }));
+    expect((engine as unknown as { open: Map<string, unknown> }).open.size).toBeLessThanOrEqual(1_024);
+  });
+  test("C28 the overflow alert names the latest offender as it folds", () => {
+    const engine = new RuleEngine(baseline);
+    for (let i = 0; i < MAX_UNKNOWN_STREAMS + 2; i++) engine.ingest(ev({ tMs: i, gocbRef: `X${i}` }));
+    const overflow = engine.alerts.find((a) => a.key === UNKNOWN_OVERFLOW_KEY)!;
+    expect([overflow.count, overflow.detail.latestGocbRef]).toEqual([2, `X${MAX_UNKNOWN_STREAMS + 1}`]);
+  });
+  test("C27 a GOOSE PDU without gocbRef or APPID is reported, not dropped or given APPID 0", () => {
+    const line = (layers: Record<string, string[]>) => JSON.stringify({ timestamp: "0", layers: { frame_time_epoch: ["1.0"], eth_src: ["02:00:00:00:00:09"], goose_stNum: ["1"], goose_sqNum: ["0"], goose_timeAllowedtoLive: ["2000"], goose_confRev: ["1"], goose_numDatSetEntries: ["1"], ...layers } });
+    const noRef = parseEkLine(line({ goose_appid: ["0x0001"] }))!;
+    const noApp = parseEkLine(line({ goose_gocbRef: ["IED/LLN0$GO$x"] }))!;
+    expect(invalidFields(noRef)).toEqual(["gocbRef"]);
+    expect(invalidFields(noApp)).toEqual(["appId"]);
   });
 });

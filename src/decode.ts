@@ -52,15 +52,15 @@ export function parseEkLine(line: string): GooseEvent | null {
   if (!line.startsWith('{"timestamp"')) return null;
   const l = (JSON.parse(line) as { layers: Record<string, string[]> }).layers;
   const ref = one(l, "goose_gocbRef");
-  if (ref === undefined) return null;
+  if (ref === undefined && one(l, "goose_stNum") === undefined) return null; // not a GOOSE PDU at all
   return {
     tMs: Math.round(Number(one(l, "frame_time_epoch")) * 1000),
     srcMac: one(l, "eth_src") ?? "",
     dstMac: one(l, "eth_dst") ?? "",
     vlanId: one(l, "vlan_id") === undefined ? null : Number(one(l, "vlan_id")),
-    appId: parseInt(one(l, "goose_appid") ?? "0", 16),
+    appId: parseInt(one(l, "goose_appid") ?? "", 16), // missing → NaN → MALFORMED_PDU, never an invented APPID 0
     simulationBit: bool(one(l, "goose_reserve1_s_bit")),
-    gocbRef: ref,
+    gocbRef: ref ?? "", // a GOOSE PDU without gocbRef is reported as malformed, not dropped
     timeAllowedToLive: Number(one(l, "goose_timeAllowedtoLive")),
     datSet: one(l, "goose_datSet") ?? "",
     goID: one(l, "goose_goID") ?? "",

@@ -121,6 +121,7 @@ const isU32 = (n: number) => Number.isInteger(n) && n >= 0 && n <= U32;
 export function invalidFields(e: GooseEvent): string[] {
   const bad: string[] = [];
   if (!Number.isFinite(e.tMs)) bad.push("time");
+  if (!e.gocbRef) bad.push("gocbRef");
   if (!isU32(e.stNum)) bad.push("stNum");
   if (!isU32(e.sqNum)) bad.push("sqNum");
   if (!isU32(e.timeAllowedToLive) || e.timeAllowedToLive === 0) bad.push("timeAllowedToLive");
@@ -152,6 +153,7 @@ export class RuleEngine {
     if (prev && e.tMs - prev.lastMs < DEDUPE_MS && e.tMs - prev.tMs < REALERT_MS) {
       prev.count += 1;
       prev.lastMs = e.tMs;
+      if (key === UNKNOWN_OVERFLOW_KEY) Object.assign(prev.detail, detail); // keep naming the latest offender
       this.onAlert(prev, false);
       return;
     }
@@ -161,6 +163,8 @@ export class RuleEngine {
     this.open.set(id, a);
     // An open alert that has been quiet for DEDUPE_MS can never fold again, so it is safe to forget.
     if (this.open.size > MAX_OPEN) for (const [k, o] of this.open) if (e.tMs - o.lastMs >= DEDUPE_MS) this.open.delete(k);
+    // Still over: drop the oldest. A dropped entry only means its next repeat starts a new alert.
+    for (const k of this.open.keys()) { if (this.open.size <= MAX_OPEN) break; this.open.delete(k); }
     this.alerts.push(a);
     if (this.alerts.length > MAX_ALERTS) this.alerts.splice(0, this.alerts.length - MAX_ALERTS);
     this.onAlert(a, true);
@@ -236,17 +240,23 @@ export class RuleEngine {
       this.state.set(key, { stNum: e.stNum, sqNum: e.sqNum, values, lastSeen: e.tMs, anchorSeen: e.tMs, talSeen: e.timeAllowedToLive, expired: false });
       return;
     }
-    s.lastSeen = e.tMs;
-    s.expired = false;
     const tal = this.trustedTal(known, s);
 
     if (e.stNum >= s.stNum) {
-      // The anchor continues, so it is alive and anything lower was a replay. If a never-adopted
-      // shadow climbs back to here, its frames meet the anchor's rules: extra alerts, never silence.
-      s.shadow = undefined;
+      // The anchor continues, so anything lower is not a restart: the shadow loses its claim to
+      // replace the anchor but keeps its rules, so forged values on it are still caught. If a
+      // never-adopted shadow climbs back to here, its frames meet the anchor's rules: extra alerts,
+      // never silence.
+      if (s.shadow) s.shadow.restartEvidence = false;
       s.anchorSeen = e.tMs;
       s.talSeen = Math.max(s.talSeen, e.timeAllowedToLive);
-      this.step(s, e, values);
+      const advances = e.stNum > s.stNum || e.sqNum > s.sqNum;
+      // Only a frame that moves the sequence on proves the publisher is alive: a replayed copy of
+      // the last frame, or a rejected forged value, must not hold off TTL_EXPIRY.
+      if (this.step(s, e, values) && advances) {
+        s.lastSeen = e.tMs;
+        s.expired = false;
+      }
       return;
     }
 
@@ -260,13 +270,18 @@ export class RuleEngine {
       return;
     }
     const advances = e.stNum > sh.stNum || e.sqNum > sh.sqNum; // a duplicate frame confirms nothing
+    if (e.stNum === sh.stNum && e.sqNum < sh.sqNum) sh.restartEvidence = false; // a sequence that rewinds is no reboot
     if (!this.step(sh, e, values) || !advances) return;
+    s.lastSeen = e.tMs; // a sequence that moves on is a live publisher, whichever one it is
+    s.expired = false;
     sh.frames += 1;
     if (sh.restartEvidence && sh.frames >= RESTART_FRAMES && e.tMs - sh.since >= Math.max(RESTART_TAL_WINDOWS * tal, RESTART_MIN_MS)) {
       s.stNum = sh.stNum;
       s.sqNum = sh.sqNum;
       s.values = sh.values;
       s.anchorSeen = e.tMs;
+      s.lastSeen = e.tMs;
+      s.expired = false;
       s.shadow = undefined;
     }
   }

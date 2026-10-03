@@ -14,7 +14,9 @@ pvesh get /nodes/$node/network/vmbr9 >/dev/null 2>&1 || {
   pvesh set /nodes/$node/network
 }
 # An existing vmbr9 is reused only if it has no port: lab GOOSE must have no way onto a real network.
-ports=$(pvesh get /nodes/$node/network/vmbr9 --output-format json | grep -o '"bridge_ports":"[^"]*"' | cut -d'"' -f4 || true)
+# Fail closed: a failed query, or a port named in any JSON spacing, stops the script.
+vmbr9=$(pvesh get /nodes/$node/network/vmbr9 --output-format json) || { echo "refusing: cannot read vmbr9" >&2; exit 1; }
+ports=$(printf '%s' "$vmbr9" | sed -n 's/.*"bridge_ports"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 case "$ports" in ""|none) ;; *) echo "refusing: vmbr9 has bridge ports ($ports); the lab bridge must have no uplink" >&2; exit 1 ;; esac
 pveam list local | grep -q debian-13-standard_13.6-1 || pveam download local debian-13-standard_13.6-1_amd64.tar.zst
 pct status 120 >/dev/null 2>&1 || pct create 120 $T --hostname goose-sensor --unprivileged 1 --features nesting=1 --cores 2 --memory 2048 --swap 512 \
