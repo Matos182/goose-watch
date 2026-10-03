@@ -252,3 +252,20 @@ describe("Review round 3 (gpt-6-astra)", () => {
     expect(invalidFields(noApp)).toEqual(["appId"]);
   });
 });
+
+describe("C31 a baseline publisher that never appears is reported", () => {
+  test("once, after the start-up grace, and not before", () => {
+    const engine = new RuleEngine(baseline);
+    engine.tick(0);
+    engine.tick(9_000);
+    expect(engine.alerts).toEqual([]);
+    for (const t of [10_500, 20_000, 60_000]) engine.tick(t);
+    expect(engine.alerts.map((a) => [a.cls, a.detail.neverSeen])).toEqual([["TTL_EXPIRY", true]]);
+  });
+  test("a publisher that speaks within the grace is not reported", () => {
+    const engine = new RuleEngine(baseline);
+    engine.tick(0);
+    for (let t = 1_000; t <= 30_000; t += 1_000) engine.ingest(ev({ tMs: t, sqNum: t / 1000 }));
+    expect(engine.alerts).toEqual([]);
+  });
+});

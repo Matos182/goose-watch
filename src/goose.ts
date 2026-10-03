@@ -6,7 +6,8 @@ export type DataValue =
   | { kind: "integer"; value: number }
   | { kind: "unsigned"; value: number }
   | { kind: "bitstring"; bits: number; value: number }
-  | { kind: "float"; value: number };
+  | { kind: "float"; value: number }
+  | { kind: "octetString"; value: number[] };
 
 export interface GoosePdu {
   gocbRef: string;
@@ -94,6 +95,8 @@ function data(d: DataValue): number[] {
       b.setFloat32(0, d.value);
       return tlv(0x87, [0x08, ...new Uint8Array(b.buffer)]);
     }
+    case "octetString":
+      return tlv(0x89, d.value);
   }
 }
 

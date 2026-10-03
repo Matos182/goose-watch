@@ -22,6 +22,8 @@ const muts: [string, string, string][] = [
   ["open map uncapped", "    for (const k of this.open.keys()) { if (this.open.size <= MAX_OPEN) break; this.open.delete(k); }\n", ""],
   ["overflow offender frozen", "      if (key === UNKNOWN_OVERFLOW_KEY) Object.assign(prev.detail, detail); // keep naming the latest offender\n", ""],
   ["empty gocbRef accepted", "  if (!e.gocbRef) bad.push(\"gocbRef\");\n", ""],
+  ["absent publisher never reported", "      if (now - this.startMs <= wait) continue;", "      continue;"],
+  ["absent publisher reported in the grace", "Math.max(known.timeAllowedToLive ?? ABSENT_DEFAULT_MS, START_GRACE_MS)", "known.timeAllowedToLive ?? ABSENT_DEFAULT_MS"],
   ["lower never replaces shadow", "if (!sh || e.stNum < sh.stNum) {", "if (!sh) {"],
   ["duplicates count", "const advances = e.stNum > sh.stNum || e.sqNum > sh.sqNum;", "const advances = true;"],
   ["TAL from frame history only", "return known.timeAllowedToLive ?? s.talSeen;", "return s.talSeen;"],

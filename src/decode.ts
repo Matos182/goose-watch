@@ -19,14 +19,16 @@ export interface GooseEvent {
   confRev: number;
   ndsCom: boolean;
   numDatSetEntries: number;
-  values: string[]; // booleans, integers, floats and bit strings in dataset order, as tshark prints them
+  // The dataset as compared by the rules: tshark's raw allData bytes (BER), so order, type and nesting all
+  // count and every MMS type is covered. Only if tshark gives no raw bytes, the typed fields it decoded.
+  values: string[];
 }
 
 const FIELDS = [
   "frame.time_epoch", "eth.src", "eth.dst", "vlan.id", "goose.appid", "goose.reserve1.s_bit",
   "goose.gocbRef", "goose.timeAllowedtoLive", "goose.datSet", "goose.goID", "goose.t", "goose.stNum", "goose.sqNum",
   "goose.simulation", "goose.confRev", "goose.ndsCom", "goose.numDatSetEntries",
-  "goose.boolean", "goose.integer", "goose.unsigned", "goose.float_value", "goose.bit_string",
+  "goose.boolean", "goose.integer", "goose.unsigned", "goose.float_value", "goose.bit_string", "@goose.allData",
 ];
 
 export type Source = { file: string } | { iface: string } | { stdin: true };
@@ -71,7 +73,7 @@ export function parseEkLine(line: string): GooseEvent | null {
     confRev: Number(one(l, "goose_confRev")),
     ndsCom: bool(one(l, "goose_ndsCom")),
     numDatSetEntries: Number(one(l, "goose_numDatSetEntries")),
-    values: [
+    values: l["@goose_allData"] ?? [
       ...(l.goose_boolean ?? []), ...(l.goose_integer ?? []), ...(l.goose_unsigned ?? []),
       ...(l.goose_float_value ?? []), ...(l.goose_bit_string ?? []),
     ],

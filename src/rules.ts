@@ -110,6 +110,10 @@ const RESTART_MIN_MS = 10_000;
 // unknown stream idle for UNKNOWN_IDLE_MS gives its slot back, so a later rogue still gets its own alert.
 export const MAX_UNKNOWN_STREAMS = 256;
 export const UNKNOWN_IDLE_MS = 60_000;
+// A baseline publisher silent since start-up is reported after its learned TAL, but never in the
+// first START_GRACE_MS (capture may start mid-heartbeat); ABSENT_DEFAULT_MS when the baseline has no TAL.
+const START_GRACE_MS = 10_000;
+const ABSENT_DEFAULT_MS = 60_000;
 export const MAX_ALERTS = 10_000;
 const MAX_OPEN = 1_024;
 export const UNKNOWN_OVERFLOW_KEY = "ffff|*unknown-publisher-overflow*";
@@ -138,6 +142,8 @@ export class RuleEngine {
   private state = new Map<string, StreamState>();
   private open = new Map<string, Alert>();
   private unknown = new Map<string, number>(); // unknown stream key → last seen
+  private startMs?: number; // first time the engine saw the clock
+  private absent = new Set<string>(); // baseline publishers already reported as never seen
   readonly alerts: Alert[] = [];
 
   constructor(baseline: Baseline, private onAlert: (a: Alert, isNew: boolean) => void = () => {}) {
@@ -184,6 +190,19 @@ export class RuleEngine {
         this.raise("TTL_EXPIRY", { tMs: now, srcMac: known.srcMac, gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
           { silentMs: now - s.lastSeen, timeAllowedToLive: tal });
       }
+    }
+    // A baseline publisher that has not sent a single frame since the monitor started is a lost
+    // signal too, once its learned TAL (or ABSENT_DEFAULT_MS without one) and a start-up grace are over.
+    this.startMs ??= now;
+    for (const [key, known] of this.known) {
+      if (this.state.has(key) || this.absent.has(key)) continue;
+      const wait = Math.max(known.timeAllowedToLive ?? ABSENT_DEFAULT_MS, START_GRACE_MS);
+      if (now - this.startMs <= wait) continue;
+      this.absent.add(key);
+      const [appHex, ...ref] = key.split("|");
+      this.ctx = { publisherInBaseline: true, macMatchesBaseline: true, testFlag: false, simulationBit: false, silenceBeforeMs: now - this.startMs };
+      this.raise("TTL_EXPIRY", { tMs: now, srcMac: known.srcMac, gocbRef: ref.join("|"), appId: parseInt(appHex!, 16) },
+        { silentMs: now - this.startMs, timeAllowedToLive: known.timeAllowedToLive ?? ABSENT_DEFAULT_MS, neverSeen: true });
     }
   }
 
