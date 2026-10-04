@@ -48,6 +48,7 @@
   .src { font: 12px var(--mono); color: var(--faint); overflow-wrap: anywhere; }
   .human { font: 12px var(--mono); color: var(--muted); margin-top: 4px; }
   .src b { color: var(--muted); font-weight: 500; }
+  .src.changed { margin-top: 4px; color: var(--muted); }
   .ai { padding: 14px 18px; background: var(--panel2); display: flex; flex-direction: column; gap: 12px; }
   .ai h3 { margin: 0; font: 600 11px var(--mono); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
   .reading { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 12px; align-items: center; }
@@ -133,6 +134,8 @@ function addCard(item, models) {
   what.append(top, el("div", "title", TITLES[a.cls] ?? a.cls), el("p", "plain", item.plain));
   const src = el("div", "src"); src.append(el("b", "", a.cls + "  "), document.createTextNode(`${a.gocbRef} · ${a.srcMac}`));
   what.append(src);
+  // Which dataset member changed, named from the SCD when the baseline has one (display only).
+  if (typeof a.detail?.changed === "string") { const ch = el("div", "src changed"); ch.append(el("b", "", "changed  "), document.createTextNode(a.detail.changed)); what.append(ch); }
   const ai = el("div", "ai"); ai.append(el("h3", "", "AI readings (advisory)"));
   const slots = el("div", ""); slots.style.display = "contents";
   ai.append(slots);

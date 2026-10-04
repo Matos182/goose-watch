@@ -29,6 +29,17 @@ bun src/cli.ts run --file fixtures/replay.pcap --baseline my-baseline.json
 # 1 alerts
 ```
 
+If you have the substation's SCL file (SCD, CID or ICD), give it to `learn`. It reports every place where the capture and the design disagree, and alerts then name the signal that changed:
+
+```sh
+bun src/cli.ts scl fixtures/substation.scd                     # the GOOSE control blocks the file declares
+bun src/cli.ts learn fixtures/baseline.pcap my-baseline.json --scd fixtures/substation.scd --strict
+bun src/cli.ts run --file fixtures/data-without-stnum.pcap --baseline my-baseline.json
+# 2026-10-01T10:00:42.000Z  sev 3  DATA_WITHOUT_STNUM BAY1_CTRL/LLN0$GO$gcbPos  02:1e:d0:00:00:11  changed: CTRL/GGIO1.Ind1.stVal [ST]
+```
+
+`--strict` makes `learn` exit 1 on any disagreement. A real SCD describes a real site: keep it, like your captures, off any shared or hosted service.
+
 Try the other files in `fixtures/` (`poisoning`, `spoofed-mac`, `ttl-expiry`, …). `bun src/cli.ts scenarios fixtures` regenerates all of them, byte for byte.
 
 ## 2 · Live: an isolated lab and the board
@@ -66,7 +77,7 @@ bun src/eval.ts nimble:latest --gold gold/gold-v3.json --pack 3
 
 ## 4 · Your own network
 
-- **A real GOOSE bus:** connect to a switch mirror port and learn a baseline from a capture you know is clean. Then run `bun src/cli.ts run --iface <if> --baseline <file>`. `tshark` only listens; capturing needs the usual Wireshark permissions.
+- **A real GOOSE bus:** connect to a switch mirror port and learn a baseline from a capture you know is clean, with `--scd` if you have the site's SCL file. Then run `bun src/cli.ts run --iface <if> --baseline <file>`. `tshark` only listens; capturing needs the usual Wireshark permissions.
 - **A home or small office:** `examples/home-watch/` is the same pattern for ARP (new device, network scan, fake router) in one file. `bun examples/home-watch/home.ts demo` runs it with no network access.
 - **Anything else:** `docs/PATTERN.md` turns the idea into a recipe (rules, measured facts, honest doubt, a human) with examples for smart homes, solar plants and servers.
 
@@ -84,6 +95,7 @@ Read the modules in the order the data flows. Each file opens with a comment say
 | 6 | `src/hops.ts` | packs 2 and 3: facts measured in code, the model picks a pattern, code maps it to a cause |
 | 7 | `src/board.ts`, `src/board.html` | the live page |
 | 8 | `src/rawsock.ts` | the guard that keeps lab frames off any real network |
+| 9 | `src/scl.ts` | the SCD import: a small XML reader that fails closed, and the check of the wire against the design |
 
 ### Add a rule
 

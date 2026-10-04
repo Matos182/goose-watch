@@ -41,6 +41,8 @@ export interface BaselineEntry {
   // Where the publisher sends: a frame for another multicast address or VLAN is a configuration change.
   dstMac?: string;
   vlanId?: number | null;
+  // Dataset member names from an SCD (`learn --scd`), in allData order. Display only: no rule reads them.
+  members?: string[];
 }
 
 export interface Baseline {
@@ -329,7 +331,8 @@ export class RuleEngine {
     } else if (e.stNum === q.stNum) {
       if (e.sqNum < q.sqNum) this.raise("SQNUM_RESET", e, { sqNum: e.sqNum, lastSqNum: q.sqNum, stNum: e.stNum });
       if (values !== q.values) {
-        this.raise("DATA_WITHOUT_STNUM", e, { stNum: e.stNum, sqNum: e.sqNum });
+        const changed = changedMembers(q.values, values, this.known.get(streamKey(e))?.members);
+        this.raise("DATA_WITHOUT_STNUM", e, { stNum: e.stNum, sqNum: e.sqNum, ...(changed && { changed }) });
         return false; // a forged value never advances the sequence
       }
     }
@@ -362,6 +365,42 @@ export class RuleEngine {
     this.unknown.set(key, now);
     return key;
   }
+}
+
+/** The top-level items of tshark's raw allData ("83:01:00:84:03:03:00:00"), one BER TLV each; null if it is not that. */
+export function dataItems(raw: string): string[] | null {
+  if (!/^[0-9a-f]{2}(:[0-9a-f]{2})*$/i.test(raw)) return null;
+  const b = raw.split(":");
+  const items: string[] = [];
+  for (let i = 0; i < b.length; ) {
+    let len = parseInt(b[i + 1] ?? "", 16), head = 2;
+    if (Number.isNaN(len)) return null;
+    if (len & 0x80) {
+      const n = len & 0x7f;
+      if (n === 0 || n > 3 || i + 2 + n > b.length) return null;
+      len = 0;
+      for (let k = 0; k < n; k++) len = len * 256 + parseInt(b[i + 2 + k]!, 16);
+      head += n;
+    }
+    if (i + head + len > b.length) return null;
+    items.push(b.slice(i, i + head + len).join(":"));
+    i += head + len;
+  }
+  return items;
+}
+
+/**
+ * Which dataset members differ between two allData values, by SCD name or as "#index" without one.
+ * For display only; the rule compares the whole value. Undefined when the values cannot be split.
+ */
+export function changedMembers(before: string, after: string, members?: string[]): string | undefined {
+  const a = dataItems(before), b = dataItems(after);
+  if (!a || !b) return undefined;
+  const idx: number[] = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) if (a[i] !== b[i]) idx.push(i);
+  if (!idx.length) return undefined;
+  const named = idx.map((i) => (members?.[i] !== undefined ? safeText(members[i]!, 60) : `#${i}`));
+  return safeText(named.slice(0, 4).join(", ") + (named.length > 4 ? ` +${named.length - 4} more` : ""), 200);
 }
 
 // Strip what could act on a terminal, flip text direction or hide text from a reader before display:

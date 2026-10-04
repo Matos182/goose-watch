@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// goose-watch CLI: scenarios · learn · run
+// goose-watch CLI: scenarios · learn · scl · run
 
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -10,13 +10,17 @@ import { pcapHeader, pcapRecord, readPcap, retime, writePcap } from "./goose";
 import { RawSocket } from "./rawsock";
 import { updateGate } from "./updates";
 import { frameClock } from "./clock";
+import { crossCheck, describe, sclBlocks } from "./scl";
 
 const [cmd, ...args] = Bun.argv.slice(2);
 
 function usage(): never {
   console.error(`usage:
   goose-watch scenarios <dir>                     write every synthetic scenario as <dir>/<name>.pcap
-  goose-watch learn <pcap> <baseline.json>        learn the publisher baseline from a clean capture
+  goose-watch learn <pcap> <baseline.json> [--scd <file>] [--strict]
+                                                  learn the publisher baseline from a clean capture; with an SCD,
+                                                  name dataset members and report where wire and SCD disagree
+  goose-watch scl <file.scd> [--json]             list the GOOSE control blocks an SCD/CID/ICD declares
   goose-watch run (--file <pcap> | --iface <if> | --stdin) --baseline <baseline.json> [--json]
   goose-watch replay <pcap> --iface <gw*> [--speed <x>]   send a scenario into the isolated lab link
   goose-watch capture --iface <gw*>                       write a live pcap stream to stdout (lab link)`);
@@ -42,9 +46,32 @@ switch (cmd) {
   case "learn": {
     const [pcap, out] = args;
     if (!pcap || !out) usage();
-    const b = learn(await decodeAll(pcap));
+    if (out.startsWith("--")) usage();
+    let b = learn(await decodeAll(pcap));
+    const scd = flag("--scd");
+    let disagreements = 0;
+    if (scd) {
+      const checked = crossCheck(b, sclBlocks(await Bun.file(scd).text()));
+      b = checked.baseline;
+      disagreements = checked.findings.length;
+      for (const f of checked.findings) console.error(`SCD: ${describe(f)}`);
+      console.error(`SCD: ${disagreements} disagreement(s) between the capture and ${scd}`);
+    }
     await Bun.write(out, JSON.stringify(b, null, 2) + "\n");
     console.log(`${b.publishers.length} publishers learned → ${out}`);
+    if (disagreements && args.includes("--strict")) process.exit(1);
+    break;
+  }
+  case "scl": {
+    const file = args[0] ?? usage();
+    const blocks = sclBlocks(await Bun.file(file).text());
+    if (args.includes("--json")) console.log(JSON.stringify(blocks, null, 2));
+    else for (const b of blocks) {
+      const addr = [b.appId === undefined ? "APPID ?" : `APPID 0x${b.appId.toString(16).padStart(4, "0")}`, b.dstMac ?? "MAC ?", b.vlanId === undefined ? "VLAN ?" : `VLAN ${b.vlanId}`].join("  ");
+      console.log(`${safeText(b.gocbRef)}  confRev ${b.confRev}  ${addr}`);
+      b.members.forEach((m, i) => console.log(`  #${i} ${safeText(m)}`));
+    }
+    console.error(`${blocks.length} GOOSE control blocks in ${file}`);
     break;
   }
   case "run": {
@@ -62,7 +89,7 @@ switch (cmd) {
       const out = gate(a, isNew);
       if (out === null) return;
       if (asJson) console.log(JSON.stringify(out === "new" ? a : out));
-      else if (out === "new") console.log(`${new Date(a.tMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  ${a.srcMac}`);
+      else if (out === "new") console.log(`${new Date(a.tMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  ${a.srcMac}${typeof a.detail.changed === "string" ? `  changed: ${a.detail.changed}` : ""}`);
       else console.log(`${new Date(a.lastMs).toISOString()}  sev ${a.severity}  ${a.cls.padEnd(18)} ${safeText(a.gocbRef)}  still recurring ×${a.count}${typeof a.detail.latestGocbRef === "string" ? `, latest ${safeText(a.detail.latestGocbRef)} ${a.detail.latestMac}` : ""}`);
     });
     const live = !file;

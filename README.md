@@ -19,6 +19,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 - **Rules** (`src/rules.ts`): new publisher (unknown control block or unexpected MAC), configuration change, stNum regression (replay or restart), stNum jump (poisoning), sqNum reset, value change without a new stNum, loss of signal (time-allowed-to-live), test flag, Ed2 simulation bit, malformed header. The baseline of publishers, and the largest time-allowed-to-live each one uses, is learned from a clean capture; silence is timed against that learned value, never a frame's own. After a regression the lower sequence is watched with every rule and replaces the old one only with restart evidence. A repeat folds into its open alert for at most a minute, a regression to a different stNum is always a new alert, and a flood of forged publishers stays bounded in memory, alerts and model calls.
 - **Models** (`src/triage.ts`, `src/hops.ts`): the default pack 3 measures facts in code, asks the model which evidence pattern they match (or the cause, for classes the rule already explains), and maps the pattern to a cause (cyberattack / maintenance / device fault / unclear). Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
 - **Who looks** (`needsHuman()` in `src/triage.ts`): code decides. Severity 2 or 3, an unsure model, or a cyberattack reading means "a human checks now". The model's own needs-a-human answer is kept in reports only.
+- **SCD import** (`src/scl.ts`): `learn --scd` checks the learned baseline against the substation's SCL file (APPID, destination MAC, VLAN, dataset, confRev, number of members, publishers missing on either side) and names each dataset member, so a forged value reads `changed: CTRL/GGIO1.Ind1.stVal [ST]` instead of `#0`. The SCD never sets timing or source MACs; those stay learned from the capture.
 - **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`.
 
 ## Quick start
@@ -26,7 +27,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 109 tests, tshark as the decoder oracle
+bun install && bun test                    # 138 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -52,6 +53,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 - All 14 scenarios decode losslessly through tshark, and each raises exactly its expected alert set. The clean baseline and a held-out clean capture raise none.
 - Removing any one rule makes its test fail (`scripts/mutate-rules.sh`, 10/10), and undoing any one hardening guard does too (`bun scripts/mutate-hardening.ts`, 22/22 named guards).
 - Live capture through the isolated lab link raises the same alerts as the offline decode (`scripts/live-parity.sh`, 14/14 at 2x), with the same PDU timestamp ages (lab replay retimes each frame). Faster replay shortens silences while the 2 s time-allowed-to-live stays real time, so at 4x the simulation-bit loss cannot fire.
+- The SCD import agrees with the learned baseline on a synthetic SCD written for the scenarios, names every changed member, finds each tampered field (APPID, MAC, VLAN, dataset, confRev, member count, missing publishers), refuses DOCTYPE and entity declarations, and leaves every alert and every model input byte-identical (`test/scl.test.ts`).
 - Model evaluation on 39 held-out gold cases (gold-v3), with labels and stop rule fixed beforehand (`docs/EVAL.md`):
 
   | Model | Pack | Verdict | Not sure | Confident accuracy | Attacks caught | p50 |
@@ -67,6 +69,7 @@ If `ollama pull` stalls (seen on WSL2), `scripts/fetch-model.sh <name> <tag> <di
 
 - Any real IED, real substation traffic, or real mirror port.
 - PRP/HSR duplicate handling.
+- SCL files exported by vendor tools. The parser is tested on a hand-written SCD and on edge cases (namespace prefixes, Ed2 `ldName`, FCDA without `daName`, GSSE, missing address), not on a real substation file.
 - Performance at bus scale. Live capture (`run --iface`) hands tshark a kernel capture filter, `ether proto 0x88b8 or (vlan and ether proto 0x88b8)`, so Sampled Values and other traffic never reach the dissector. It is proven on a Linux veth pair with VLAN rx offload off and on (`scripts/capture-filter-probe.sh`), not on a real NIC, and double-tagged (QinQ) frames are not matched. Measure CPU on a real bus before relying on it.
 - Model behaviour outside these 11 synthetic evidence patterns.
 
@@ -78,7 +81,7 @@ The gold cases share one generator and are not independent field samples. Severa
 - A forward forgery: a frame one state ahead with forged values is a normal state change. The real relay's next frame then reads as STNUM_REGRESSION (severity 3), which is the alarm, but the monitor cannot tell which of the two sources is genuine.
 - Closing both needs authenticated GOOSE or a second, independent view of the same signal, for example the relay's own state read over MMS.
 - A relay whose clock is more than 5 s behind (or 1 s ahead of) the sensor never shows restart evidence: after a reboot it keeps raising STNUM_REGRESSION until a person looks. A relay that keeps its stNum across a reboot shows as TTL_EXPIRY then SQNUM_RESET, and is followed normally after that. stNum and sqNum wrap-around at 2^32 is treated as a regression.
-- The Ed2 `simulation` flag is read as the Ed1 test flag, and quality `test` bits and Beh/Mod are not read, so an Ed2 relay in test mode raises nothing by itself. The dataset is compared byte for byte, but its meaning (which member is which signal) needs the SCL/SCD import that is not built yet.
+- The Ed2 `simulation` flag is read as the Ed1 test flag, and quality `test` bits and Beh/Mod are not read, so an Ed2 relay in test mode raises nothing by itself. The dataset is compared byte for byte. Which member changed is named from the SCD (`learn --scd`), or given by index without one; a member that is itself a structure is named as a whole.
 - Timing protections rely on a baseline learned by this version, which records each publisher's time-allowed-to-live; `run` warns when a baseline lacks it. Repeats of an open alert are printed at most every 10 s, a condition that keeps going (a silence included) is announced again each minute, and the board replays only the last 200 lines of the current run when it restarts.
 - Sequence and value checks start from the first frame the monitor sees: there is no continuity across a monitor restart, and a forged first frame becomes the starting point. With `run --stdin`, silence is timed only once the first frame has arrived, and a capture piped in then held open reads as the publishers going silent.
 - The board's "live" badge means the browser is connected to the board, not that the sensor is capturing: supervise the capture process separately. A GOOSE frame whose PDU carries none of the fields read here (a truncated frame, or a GSE management PDU) is reported as MALFORMED_PDU.
@@ -89,7 +92,7 @@ The gold cases share one generator and are not independent field samples. Severa
 |---|---|
 | `src/` | decoder, rules, triage packs, board, lab socket, eval |
 | `test/` | `bun test` suites, with tshark as the decoding oracle |
-| `fixtures/` | synthetic pcaps, one per scenario, regenerated byte-for-byte by `bun run scenarios` |
+| `fixtures/` | synthetic pcaps, one per scenario, regenerated byte-for-byte by `bun run scenarios`, and a hand-written synthetic SCD |
 | `gold/`, `reports/` | held-out gold sets and the eval report for every model × pack ([index](reports/README.md)) |
 | `scripts/` | isolated lab, live parity, rule mutation, Proxmox lab, model mirror |
 | `docs/` | [claims](docs/CLAIMS.md), [eval method](docs/EVAL.md), [pattern](docs/PATTERN.md), [getting started](docs/GETTING-STARTED.md) |
