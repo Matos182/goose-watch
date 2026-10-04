@@ -52,7 +52,7 @@ GOOSE Watch was built against a written list of claims. Each claim says what "do
 
 - [x] **C10** Live capture works end to end: a scenario replayed on an isolated link raises the same alerts as the offline decode, with the same PDU ages. Probe: `scripts/live-parity.sh`, 14/14 at 2× (2026-10-03).
 - [x] **C11** The board shows each alert with the rule that fired, the model's probabilities and one plain sentence, updating live. Probe: browser screenshot.
-- [ ] **C13** A lab run can be watched live from a terminal. Probe: `scripts/watch-lab.sh` opens a tmux session with capture, replay and alert panes.
+- [x] **C13** A lab run can be watched live from a terminal. Probe: `scripts/watch-lab.sh` opens a tmux session with capture, replay and alert panes.
 - [x] **C14** A Proxmox deployment is reproducible from the repository, on an isolated bridge with no uplink. Probe: `scripts/proxmox-lab.sh`; a fresh container reached C10 (13/13) on 2026-10-02, on an earlier version with 13 scenarios; not re-run since.
 - [x] **C15** The README states what is and is not measured. Probe: read it.
 
