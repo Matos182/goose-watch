@@ -94,27 +94,46 @@ export function parseEkLine(line: string): GooseEvent | null {
   };
 }
 
+// Bun does not take its children down with it, so a live tshark would keep capturing after `run` is
+// stopped. Every tshark still running is killed when we exit or are told to stop (SIGKILL cannot be caught).
+const live = new Set<Bun.Subprocess>();
+let reaperOn = false;
+function reaper() {
+  if (reaperOn) return;
+  reaperOn = true;
+  process.on("exit", () => { for (const p of live) p.kill(); });
+  for (const [sig, n] of [["SIGINT", 2], ["SIGTERM", 15], ["SIGHUP", 1]] as const) process.on(sig, () => process.exit(128 + n));
+}
+
 export async function* decode(source: Source): AsyncGenerator<GooseEvent> {
+  reaper();
   const proc = Bun.spawn(["tshark", ...tsharkArgs(source)], { stdin: "stdin" in source ? "inherit" : "ignore", stdout: "pipe", stderr: "pipe" });
-  // Read stderr while capturing: on a long live run a full stderr pipe would stall tshark.
-  let errTail = "";
-  const drain = (async () => { for await (const chunk of proc.stderr.pipeThrough(new TextDecoderStream())) errTail = (errTail + chunk).slice(-300); })();
-  const reader = proc.stdout.pipeThrough(new TextDecoderStream()).getReader();
-  let buf = "";
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buf += value;
-    let nl: number;
-    while ((nl = buf.indexOf("\n")) >= 0) {
-      const ev = parseEkLine(buf.slice(0, nl));
-      buf = buf.slice(nl + 1);
-      if (ev) yield ev;
+  live.add(proc);
+  try {
+    // Read stderr while capturing: on a long live run a full stderr pipe would stall tshark.
+    let errTail = "";
+    const drain = (async () => { for await (const chunk of proc.stderr.pipeThrough(new TextDecoderStream())) errTail = (errTail + chunk).slice(-300); })();
+    const reader = proc.stdout.pipeThrough(new TextDecoderStream()).getReader();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += value;
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const ev = parseEkLine(buf.slice(0, nl));
+        buf = buf.slice(nl + 1);
+        if (ev) yield ev;
+      }
     }
+    const code = await proc.exited;
+    await drain;
+    if (code !== 0) throw new Error(`tshark exited ${code}: ${errTail}`);
+  } finally {
+    // Also when the caller stops reading early: tshark must not outlive the loop that reads it.
+    live.delete(proc);
+    if (proc.exitCode === null) proc.kill();
   }
-  const code = await proc.exited;
-  await drain;
-  if (code !== 0) throw new Error(`tshark exited ${code}: ${errTail}`);
 }
 
 export async function decodeAll(file: string): Promise<GooseEvent[]> {
