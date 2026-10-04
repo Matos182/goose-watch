@@ -26,7 +26,7 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 103 tests, tshark as the decoder oracle
+bun install && bun test                    # 109 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
