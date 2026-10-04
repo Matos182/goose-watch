@@ -36,6 +36,7 @@
   .card { display: grid; grid-template-columns: 6px minmax(0, 1fr) minmax(0, 1.05fr); background: var(--panel);
     border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow: hidden; animation: in .35s ease-out; }
   @keyframes in { from { opacity: 0; transform: translateY(-6px); } }
+  @media (prefers-reduced-motion: reduce) { .card, .pill.live::before, .bars i { animation: none; transition: none; } }
   .bar.s1 { background: var(--sev1); } .bar.s2 { background: var(--sev2); } .bar.s3 { background: var(--sev3); }
   .what { padding: 16px 20px; border-right: 1px solid var(--line); min-width: 0; }
   .top { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
