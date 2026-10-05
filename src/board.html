@@ -26,6 +26,10 @@
   .pill { font: 12px var(--mono); padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
   .pill.down { color: var(--sev2); border-color: #4a3a1a; }
   .pill.down::before { background: var(--sev2) !important; box-shadow: 0 0 8px var(--sev2) !important; }
+  .pill.dot::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; background: var(--faint); }
+  .pill.capturing { color: var(--ok); border-color: #1f4a37; } .pill.capturing::before { background: var(--ok); }
+  .pill.no-goose, .pill.none { color: var(--sev2); border-color: #4a3a1a; } .pill.no-goose::before, .pill.none::before { background: var(--sev2); }
+  .pill.silent { color: var(--sev3); border-color: #5a2626; } .pill.silent::before { background: var(--sev3); box-shadow: 0 0 8px var(--sev3); }
   .pill.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
     margin-right: 7px; box-shadow: 0 0 8px var(--ok); animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: .35; } }
@@ -80,7 +84,7 @@
 <body>
 <header>
   <div class="brand"><h1>GOOSE <b>Watch</b></h1><span>IEC 61850 substation bus · local AI triage</span></div>
-  <div class="pills"><span class="pill live" id="conn">connecting</span><span class="pill" id="models"></span><span class="pill">local model only</span></div>
+  <div class="pills"><span class="pill dot none" id="sensor" title="What the capture process last reported. Separate from this page's own connection.">no sensor yet</span><span class="pill live" id="conn">connecting</span><span class="pill" id="models"></span><span class="pill">local model only</span></div>
 </header>
 <main>
   <p class="rule"><strong>The rule decides.</strong> Severity comes only from deterministic checks on the traffic. The AI models give their reading and show how sure they are, and a human makes the call.</p>
@@ -155,10 +159,15 @@ let models = [];
 const es = new EventSource("/events");
 es.addEventListener("snapshot", (e) => {
   const s = JSON.parse(e.data); models = s.models;
+  if (s.sensor) showSensor(s.sensor);
   document.getElementById("models").textContent = s.models.join(" · ");
   feed.replaceChildren(el("div", "", "")); feed.firstChild.id = "empty"; feed.firstChild.textContent = "listening to the bus…";
   cards.clear(); for (const it of s.items) addCard(it, models);
 });
+// C43: the sensor pill follows the capture process's heartbeat; "board live" is only this page's link.
+const sensorPill = document.getElementById("sensor");
+function showSensor(st) { sensorPill.textContent = st.text; sensorPill.className = "pill dot " + st.state; }
+es.addEventListener("sensor", (e) => showSensor(JSON.parse(e.data)));
 es.addEventListener("alert", (e) => addCard(JSON.parse(e.data), models));
 es.addEventListener("reading", (e) => {
   const { id, reading } = JSON.parse(e.data), c = cards.get(id); if (!c) return;
@@ -171,8 +180,8 @@ es.addEventListener("update", (e) => {
 });
 es.addEventListener("reset", () => { feed.replaceChildren(); const e = el("div", "", "new run · listening to the bus…"); e.id = "empty"; feed.append(e); cards.clear(); });
 const conn = document.getElementById("conn");
-es.onopen = () => { conn.textContent = "live"; conn.classList.remove("down"); };
-es.onerror = () => { conn.textContent = "reconnecting"; conn.classList.add("down"); };
+es.onopen = () => { conn.textContent = "board live"; conn.classList.remove("down"); };
+es.onerror = () => { conn.textContent = "board reconnecting"; conn.classList.add("down"); showSensor({ state: "none", text: "sensor unknown" }); };
 </script>
 </body>
 </html>

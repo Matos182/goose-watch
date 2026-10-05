@@ -11,6 +11,7 @@ import { RawSocket } from "./rawsock";
 import { updateGate } from "./updates";
 import { frameClock } from "./clock";
 import { crossCheck, describe, sclBlocks } from "./scl";
+import { HEARTBEAT_MS, heartbeat } from "./sensor";
 
 const [cmd, ...args] = Bun.argv.slice(2);
 
@@ -95,9 +96,15 @@ switch (cmd) {
     const live = !file;
     const clock = frameClock();
     if (live) setInterval(() => { const now = clock.now() ?? (iface ? Date.now() : null); if (now !== null) engine.tick(now); }, 250);
+    // C42: live, the alert stream also carries a heartbeat, so a board can tell a quiet bus from a dead sensor.
+    let frames = 0, lastFrameWall: number | null = null;
+    const beat = () => console.log(JSON.stringify(heartbeat(Date.now(), frames, lastFrameWall)));
+    if (live && asJson) { beat(); setInterval(beat, HEARTBEAT_MS); }
     for await (const e of decode(file ? { file } : iface ? { iface } : { stdin: true })) {
       engine.ingest(e);
       clock.saw(e.tMs);
+      frames += 1;
+      lastFrameWall = Date.now();
     }
     if (live) process.exit(0);
     if (!asJson) console.error(`${engine.alerts.length} alerts`);

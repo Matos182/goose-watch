@@ -11,6 +11,7 @@ import { SystemOneAdapter, verdict, type TriageResult } from "./triage";
 import { triage2, triage3 } from "./hops";
 import { Backlog } from "./backlog";
 import type { AlertUpdate } from "./updates";
+import { sensorState, type Heartbeat } from "./sensor";
 
 const args = Bun.argv.slice(2);
 const opt = (n: string, d: string) => (args.includes(n) ? args[args.indexOf(n) + 1]! : d);
@@ -69,6 +70,29 @@ function onAlert(a: Alert, ask = true) {
   }
 }
 
+// C43: what the sensor last said. Kept across a {"reset":true}: a new run does not mean a new sensor.
+let beat: Heartbeat["heartbeat"] | null = null;
+let shown = "";
+function sensorNow() { return sensorState(beat, Date.now()); }
+function pushSensor() {
+  const st = sensorNow();
+  if (st.text === shown) return;
+  shown = st.text;
+  broadcast("sensor", st);
+}
+setInterval(pushSensor, 1000); // a sensor goes silent without writing anything, so the board's own clock has to notice
+
+function onHeartbeat(h: unknown) {
+  const hb = h as Heartbeat["heartbeat"];
+  if (!hb || !Number.isFinite(hb.tMs) || !Number.isFinite(hb.frames) || !(hb.idleMs === null || Number.isFinite(hb.idleMs))) {
+    console.error("board: skipped a malformed heartbeat");
+    return;
+  }
+  if (beat && hb.tMs < beat.tMs) return; // an older beat never hides a newer one
+  beat = { tMs: hb.tMs, frames: hb.frames, idleMs: hb.idleMs };
+  pushSensor();
+}
+
 /** A repeat of an open alert: update its count on the card. */
 function onUpdate(u: AlertUpdate) {
   const it = items.find((x) => x.alert.cls === u.update.cls && x.alert.key === u.update.key && x.alert.tMs === u.update.tMs);
@@ -85,6 +109,7 @@ function handle(l: string, live: boolean) {
   try { o = JSON.parse(l); } catch { console.error(`board: skipped a malformed alert line (${l.length} bytes)`); return; }
   if (o.reset) { items = []; broadcast("reset", {}); return; }
   if (o.update) { onUpdate(o as AlertUpdate); return; }
+  if (o.heartbeat) { onHeartbeat(o.heartbeat); return; }
   onAlert(o as Alert, live);
 }
 
@@ -133,7 +158,7 @@ Bun.serve({
     if (url.pathname === "/events") {
       let ctl: ReadableStreamDefaultController;
       return new Response(new ReadableStream({
-        start(c) { ctl = c; clients.add(c); c.enqueue(enc.encode(`event: snapshot\ndata: ${JSON.stringify({ items, models })}\n\n`)); },
+        start(c) { ctl = c; clients.add(c); c.enqueue(enc.encode(`event: snapshot\ndata: ${JSON.stringify({ items, models, sensor: sensorNow() })}\n\n`)); },
         cancel() { clients.delete(ctl); },
       }), { headers: { "content-type": "text/event-stream", "cache-control": "no-cache" } });
     }

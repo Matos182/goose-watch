@@ -20,14 +20,14 @@ mirror port / lab link ─▶ tshark (GOOSE decode) ─▶ rules (severity 1–3
 - **Models** (`src/triage.ts`, `src/hops.ts`): the default pack 3 measures facts in code, asks the model which evidence pattern they match (or the cause, for classes the rule already explains), and maps the pattern to a cause (cyberattack / maintenance / device fault / unclear). Below p 0.60 the board says **not sure**. The model can never raise, lower or clear an alert.
 - **Who looks** (`needsHuman()` in `src/triage.ts`): code decides. Severity 2 or 3, an unsure model, or a cyberattack reading means "a human checks now". The model's own needs-a-human answer is kept in reports only.
 - **SCD import** (`src/scl.ts`): `learn --scd` checks the learned baseline against the substation's SCL file (APPID, destination MAC, VLAN, dataset, confRev, number of members, publishers missing on either side) and names each dataset member, so a forged value reads `changed: CTRL/GGIO1.Ind1.stVal [ST]` instead of `#0`. The SCD never sets timing or source MACs; those stay learned from the capture.
-- **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`.
+- **Board** (`src/board.ts`, `src/board.html`): a live page on `127.0.0.1:8099`. A sensor pill shows what the capture process last reported (capturing, no GOOSE for 30 s, or sensor silent for 15 s), apart from the page's own link, so a quiet board never hides a dead sensor.
 
 ## Quick start
 
 You need Linux or WSL2, bun ≥ 1.4 and tshark ≥ 4.4. For the AI readings, add Ollama ≥ 0.35 with a decision model (`ollama pull nimble`).
 
 ```sh
-bun install && bun test                    # 135 tests, tshark as the decoder oracle
+bun install && bun test                    # 146 tests, tshark as the decoder oracle
 bun src/cli.ts run --file fixtures/replay.pcap --baseline fixtures/baseline.json
 scripts/demo.sh 2                          # isolated lab + live board on http://127.0.0.1:8099 ; scripts/demo.sh stop
 ```
@@ -84,7 +84,7 @@ The gold cases share one generator and are not independent field samples. Severa
 - The Ed2 `simulation` flag is read as the Ed1 test flag, and quality `test` bits and Beh/Mod are not read, so an Ed2 relay in test mode raises nothing by itself. The dataset is compared byte for byte. Which member changed is named from the SCD (`learn --scd`), or given by index without one; a member that is itself a structure is named as a whole.
 - Timing protections rely on a baseline learned by this version, which records each publisher's time-allowed-to-live; `run` warns when a baseline lacks it. Repeats of an open alert are printed at most every 10 s, a condition that keeps going (a silence included) is announced again each minute, and the board replays only the last 200 lines of the current run when it restarts.
 - Sequence and value checks start from the first frame the monitor sees: there is no continuity across a monitor restart, and a forged first frame becomes the starting point. With `run --stdin`, silence is timed only once the first frame has arrived, and a capture piped in then held open reads as the publishers going silent.
-- The board's "live" badge means the browser is connected to the board, not that the sensor is capturing: supervise the capture process separately. A GOOSE frame whose PDU carries none of the fields read here (a truncated frame, or a GSE management PDU) is reported as MALFORMED_PDU.
+- The sensor pill follows heartbeats that live `run --json` writes every 5 s into the alert stream. It says the capture process is running and counting frames; it cannot tell a mirror port that shows only part of the bus from the whole bus, and it assumes the board and the sensor share a clock (the same machine). A GOOSE frame whose PDU carries none of the fields read here (a truncated frame, or a GSE management PDU) is reported as MALFORMED_PDU.
 
 ## Repository layout
 
